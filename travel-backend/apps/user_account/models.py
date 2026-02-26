@@ -428,3 +428,76 @@ class Enquiry(BaseModel):
 
     def __str__(self):
         return f"{self.name} - {self.service}"
+
+
+class Destination(BaseModel):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    location = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    number_of_days = models.IntegerField(null=True, blank=True)
+    number_of_nights = models.IntegerField(null=True, blank=True)
+    pickup_location = models.CharField(max_length=255, null=True, blank=True)
+    drop_location = models.CharField(max_length=255, null=True, blank=True)
+    transportation_mode = models.CharField(max_length=50, null=True, blank=True)
+    stay_type = models.CharField(max_length=50, null=True, blank=True)
+    meals_included = models.TextField(null=True, blank=True, help_text="Details about meals included")
+    guide = models.BooleanField(default=False)
+    destinations = models.TextField(null=True, blank=True, help_text="Comma-separated destinations")
+    inclusions = models.TextField(null=True, blank=True, help_text="Comma-separated inclusions")
+    exclusions = models.TextField(null=True, blank=True, help_text="Comma-separated exclusions")
+    video_link = models.URLField(max_length=500, null=True, blank=True)
+    video_description = models.TextField(null=True, blank=True)
+    image_1 = models.ImageField(upload_to="destinations/", null=True, blank=True)
+    image_2 = models.ImageField(upload_to="destinations/", null=True, blank=True)
+    image_3 = models.ImageField(upload_to="destinations/", null=True, blank=True)
+    is_featured = models.BooleanField(default=False)
+    is_trending = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-date_added"]
+        verbose_name = "Destination"
+        verbose_name_plural = "Destinations"
+
+    def __str__(self):
+        return self.name
+
+
+class DestinationEnquiry(BaseModel):
+    STATUS_CHOICES = [
+        ("pending", "Pending"),
+        ("contacted", "Contacted"),
+        ("quoted", "Quoted"),
+        ("booked", "Booked"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    destination = models.ForeignKey(
+        Destination,
+        on_delete=models.CASCADE,
+        related_name="enquiries",
+    )
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    phone = models.CharField(max_length=30)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    number_of_pax = models.IntegerField(default=1)
+    flight_ticket_required = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
+    follow_up_notes = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="destination_enquiries",
+    )
+
+    class Meta:
+        ordering = ["-date_added"]
+        verbose_name = "Destination Enquiry"
+        verbose_name_plural = "Destination Enquiries"
+
+    def __str__(self):
+        return f"{self.full_name} - {self.destination.name}"

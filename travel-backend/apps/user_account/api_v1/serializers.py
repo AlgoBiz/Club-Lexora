@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from apps.user_account.models import (
-    Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry
+    Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
+    Destination, DestinationEnquiry
 )
 
 User = get_user_model()
@@ -428,4 +429,140 @@ class EnquiryCreateSerializer(serializers.ModelSerializer):
 class EnquiryUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enquiry
+        fields = ["status", "follow_up_notes", "assigned_to"]
+
+
+class DestinationListSerializer(serializers.ModelSerializer):
+    image_1_url = serializers.SerializerMethodField()
+    image_2_url = serializers.SerializerMethodField()
+    image_3_url = serializers.SerializerMethodField()
+    destinations_list = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Destination
+        fields = [
+            "id", "auto_id", "name", "slug", "location", "number_of_days",
+            "number_of_nights", "pickup_location", "drop_location",
+            "transportation_mode", "stay_type", "guide", "destinations_list",
+            "image_1_url", "image_2_url", "image_3_url", "is_featured",
+            "is_trending", "is_active",
+        ]
+
+    def get_image_1_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image_1)
+
+    def get_image_2_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image_2)
+
+    def get_image_3_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image_3)
+
+    def get_destinations_list(self, obj):
+        return _parse_comma_separated(obj.destinations)
+
+
+class DestinationDetailSerializer(serializers.ModelSerializer):
+    image_1_url = serializers.SerializerMethodField()
+    image_2_url = serializers.SerializerMethodField()
+    image_3_url = serializers.SerializerMethodField()
+    destinations_list = serializers.SerializerMethodField()
+    inclusions_list = serializers.SerializerMethodField()
+    exclusions_list = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Destination
+        fields = "__all__"
+
+    def get_image_1_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image_1)
+
+    def get_image_2_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image_2)
+
+    def get_image_3_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image_3)
+
+    def get_destinations_list(self, obj):
+        return _parse_comma_separated(obj.destinations)
+
+    def get_inclusions_list(self, obj):
+        return _parse_comma_separated(obj.inclusions)
+
+    def get_exclusions_list(self, obj):
+        return _parse_comma_separated(obj.exclusions)
+
+
+class DestinationCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Destination
+        exclude = ["auto_id", "date_added", "date_updated"]
+
+    def validate_number_of_days(self, value):
+        if value < 1:
+            raise serializers.ValidationError("Number of days must be at least 1.")
+        return value
+
+    def validate_number_of_nights(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Number of nights cannot be negative.")
+        return value
+
+    def validate(self, data):
+        number_of_days = data.get("number_of_days")
+        number_of_nights = data.get("number_of_nights")
+        if number_of_days and number_of_nights:
+            if number_of_nights > number_of_days:
+                raise serializers.ValidationError(
+                    {"number_of_nights": "Number of nights cannot exceed number of days."}
+                )
+        return data
+
+
+class DestinationEnquiryListSerializer(serializers.ModelSerializer):
+    destination_name = serializers.CharField(source="destination.name", read_only=True)
+    assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True)
+
+    class Meta:
+        model = DestinationEnquiry
+        fields = [
+            "id", "auto_id", "destination", "destination_name", "full_name",
+            "email", "phone", "start_date", "end_date", "number_of_pax",
+            "flight_ticket_required", "status", "assigned_to_name",
+            "date_added", "is_active",
+        ]
+
+
+class DestinationEnquiryDetailSerializer(serializers.ModelSerializer):
+    destination_name = serializers.CharField(source="destination.name", read_only=True)
+    assigned_to_name = serializers.CharField(source="assigned_to.full_name", read_only=True)
+
+    class Meta:
+        model = DestinationEnquiry
+        fields = "__all__"
+
+
+class DestinationEnquiryCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DestinationEnquiry
+        fields = [
+            "destination", "full_name", "email", "phone", "start_date",
+            "end_date", "number_of_pax", "flight_ticket_required",
+        ]
+
+    def validate(self, data):
+        if data.get("end_date") and data.get("start_date"):
+            if data["end_date"] < data["start_date"]:
+                raise serializers.ValidationError(
+                    {"end_date": "End date cannot be before start date."}
+                )
+        if data.get("number_of_pax", 0) < 1:
+            raise serializers.ValidationError(
+                {"number_of_pax": "At least one passenger is required."}
+            )
+        return data
+
+
+class DestinationEnquiryUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DestinationEnquiry
         fields = ["status", "follow_up_notes", "assigned_to"]

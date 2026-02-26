@@ -9,7 +9,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.user_account.models import (
-    Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry
+    Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
+    Destination, DestinationEnquiry
 )
 from apps.user_account.api_v1.serializers import (
     UserSerializer, UserDetailSerializer, ChangePasswordSerializer,
@@ -22,6 +23,9 @@ from apps.user_account.api_v1.serializers import (
     FlightEnquiryCreateSerializer, FlightEnquiryUpdateSerializer,
     EnquiryListSerializer, EnquiryDetailSerializer,
     EnquiryCreateSerializer, EnquiryUpdateSerializer,
+    DestinationListSerializer, DestinationDetailSerializer, DestinationCreateUpdateSerializer,
+    DestinationEnquiryListSerializer, DestinationEnquiryDetailSerializer,
+    DestinationEnquiryCreateSerializer, DestinationEnquiryUpdateSerializer,
 )
 
 User = get_user_model()
@@ -669,4 +673,154 @@ class EnquiryViewSet(BaseModelViewSet):
         serializer = EnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response(
             f"Enquiries for {service_param} retrieved successfully.", serializer.data
+        )
+
+
+class DestinationViewSet(BaseModelViewSet):
+    search_fields = ["name", "location", "description", "destinations"]
+    ordering_fields = ["number_of_days", "date_added"]
+    filterset_fields = [
+        "transportation_mode", "stay_type", "guide", "is_featured",
+        "is_trending", "is_active",
+    ]
+
+    def get_queryset(self):
+        return Destination.objects.only(
+            "id", "auto_id", "name", "slug", "location", "number_of_days",
+            "number_of_nights", "pickup_location", "drop_location",
+            "transportation_mode", "stay_type", "guide", "destinations",
+            "image_1", "image_2", "image_3", "is_featured", "is_trending",
+            "is_active", "date_added",
+        )
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return DestinationListSerializer
+        if self.action == "retrieve":
+            return DestinationDetailSerializer
+        return DestinationCreateUpdateSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        destination = serializer.save()
+        return self.success_response(
+            "Destination created successfully.",
+            DestinationDetailSerializer(destination, context={"request": request}).data,
+            status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        destination = serializer.save()
+        return self.success_response(
+            "Destination updated successfully.",
+            DestinationDetailSerializer(destination, context={"request": request}).data,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return self.success_response("Destination deleted successfully.")
+
+    @action(detail=False, methods=["get"])
+    def featured(self, request):
+        queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+        serializer = DestinationListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response("Featured destinations retrieved successfully.", serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def trending(self, request):
+        queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        serializer = DestinationListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response("Trending destinations retrieved successfully.", serializer.data)
+
+
+class DestinationEnquiryViewSet(BaseModelViewSet):
+    search_fields = ["full_name", "email", "phone", "destination__name"]
+    ordering_fields = ["start_date", "date_added"]
+    filterset_fields = ["status", "destination", "flight_ticket_required", "is_active"]
+
+    def get_queryset(self):
+        return DestinationEnquiry.objects.select_related("destination", "assigned_to").only(
+            "id", "auto_id", "destination", "full_name", "email", "phone",
+            "start_date", "end_date", "number_of_pax", "flight_ticket_required",
+            "status", "assigned_to", "date_added", "is_active",
+        )
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return DestinationEnquiryListSerializer
+        if self.action == "retrieve":
+            return DestinationEnquiryDetailSerializer
+        if self.action in ["update", "partial_update"]:
+            return DestinationEnquiryUpdateSerializer
+        return DestinationEnquiryCreateSerializer
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [AllowAny()]
+        if self.action in ["update", "partial_update", "destroy"]:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        enquiry = serializer.save()
+        return self.success_response(
+            "Destination enquiry submitted successfully. Our team will contact you within 24 hours.",
+            DestinationEnquiryDetailSerializer(enquiry, context={"request": request}).data,
+            status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        enquiry = serializer.save()
+        return self.success_response(
+            "Destination enquiry updated successfully.",
+            DestinationEnquiryDetailSerializer(enquiry, context={"request": request}).data,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+        return self.success_response("Destination enquiry deleted successfully.")
+
+    @action(detail=False, methods=["get"])
+    def pending(self, request):
+        queryset = self.get_queryset().filter(status="pending", is_active=True)
+        serializer = DestinationEnquiryListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response("Pending enquiries retrieved successfully.", serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def by_status(self, request):
+        status_param = request.query_params.get("status", "pending")
+        queryset = self.get_queryset().filter(status=status_param, is_active=True)
+        serializer = DestinationEnquiryListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response(
+            f"{status_param.title()} enquiries retrieved successfully.", serializer.data
+        )
+
+    @action(detail=False, methods=["get"])
+    def by_destination(self, request):
+        destination_id = request.query_params.get("destination_id")
+        if not destination_id:
+            return self.error_response("Destination ID parameter is required.")
+        queryset = self.get_queryset().filter(destination_id=destination_id, is_active=True)
+        serializer = DestinationEnquiryListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response(
+            "Enquiries for destination retrieved successfully.", serializer.data
         )
