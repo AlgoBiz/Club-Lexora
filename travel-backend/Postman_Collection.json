@@ -1,0 +1,405 @@
+{
+  "info": {
+    "name": "Club Luxora Travel Platform API",
+    "description": "Complete API collection for testing all endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.StatusCode === 6000) {",
+                  "    pm.environment.set('access_token', jsonData.data.tokens.access);",
+                  "    pm.environment.set('refresh_token', jsonData.data.tokens.refresh);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login", ""]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh", ""]
+            }
+          }
+        },
+        {
+          "name": "Verify Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/verify/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "verify", ""]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/logout/",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hotels",
+      "item": [
+        {
+          "name": "List Hotels",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/hotels/",
+              "host": ["{{base_url}}"],
+              "path": ["hotels", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Hotel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Paradise Resort\",\n  \"slug\": \"paradise-resort\",\n  \"location\": \"Maldives\",\n  \"description\": \"Luxury resort\",\n  \"rating\": 5,\n  \"price_per_night\": 25000.00,\n  \"amenities\": \"WiFi,Pool,Spa\",\n  \"has_wifi\": true,\n  \"has_pool\": true,\n  \"is_featured\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/hotels/",
+              "host": ["{{base_url}}"],
+              "path": ["hotels", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Hotel Details",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/hotels/:id/",
+              "host": ["{{base_url}}"],
+              "path": ["hotels", ":id", ""],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Hotel",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_premium\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/hotels/:id/",
+              "host": ["{{base_url}}"],
+              "path": ["hotels", ":id", ""],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Featured Hotels",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/hotels/featured/",
+              "host": ["{{base_url}}"],
+              "path": ["hotels", "featured", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Packages",
+      "item": [
+        {
+          "name": "List Packages",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/packages/",
+              "host": ["{{base_url}}"],
+              "path": ["packages", ""]
+            }
+          }
+        },
+        {
+          "name": "Create Package",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Maldives Getaway\",\n  \"slug\": \"maldives-getaway\",\n  \"location\": \"Maldives\",\n  \"description\": \"Luxury package\",\n  \"duration\": \"5 Days / 4 Nights\",\n  \"group_size\": \"2-6 Pax\",\n  \"price\": 89999.00,\n  \"category\": \"international\",\n  \"type\": \"international\",\n  \"is_international\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/packages/",
+              "host": ["{{base_url}}"],
+              "path": ["packages", ""]
+            }
+          }
+        },
+        {
+          "name": "Kerala Packages",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/packages/kerala/",
+              "host": ["{{base_url}}"],
+              "path": ["packages", "kerala", ""]
+            }
+          }
+        },
+        {
+          "name": "International Packages",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/packages/international/",
+              "host": ["{{base_url}}"],
+              "path": ["packages", "international", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flight Enquiries",
+      "item": [
+        {
+          "name": "Create Flight Enquiry",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"trip_type\": \"roundtrip\",\n  \"from_location\": \"Mumbai\",\n  \"to_location\": \"Dubai\",\n  \"departure_date\": \"2024-12-01\",\n  \"return_date\": \"2024-12-10\",\n  \"adults\": 2,\n  \"children\": 0,\n  \"travel_class\": \"economy\",\n  \"name\": \"John Doe\",\n  \"phone\": \"+919876543210\",\n  \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/flight-enquiries/",
+              "host": ["{{base_url}}"],
+              "path": ["flight-enquiries", ""]
+            }
+          }
+        },
+        {
+          "name": "List Flight Enquiries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/flight-enquiries/",
+              "host": ["{{base_url}}"],
+              "path": ["flight-enquiries", ""]
+            }
+          }
+        },
+        {
+          "name": "Pending Flight Enquiries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/flight-enquiries/pending/",
+              "host": ["{{base_url}}"],
+              "path": ["flight-enquiries", "pending", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "General Enquiries",
+      "item": [
+        {
+          "name": "Create Enquiry",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"phone\": \"+919876543210\",\n  \"service\": \"packages-kerala\",\n  \"destination\": \"Munnar\",\n  \"travel_date\": \"2024-12-20\",\n  \"travelers\": \"2\",\n  \"message\": \"Looking for Kerala honeymoon package\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/enquiries/",
+              "host": ["{{base_url}}"],
+              "path": ["enquiries", ""]
+            }
+          }
+        },
+        {
+          "name": "List Enquiries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/enquiries/",
+              "host": ["{{base_url}}"],
+              "path": ["enquiries", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
