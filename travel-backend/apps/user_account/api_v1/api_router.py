@@ -1,10 +1,11 @@
 from django.conf import settings
-from django.urls import path, include
+from django.urls import path
 from apps.user_account.api_v1.views import (
     UserViewSet, HotelViewSet, PackageViewSet, HouseboatViewSet,
     CruiseViewSet, IslandStayViewSet, FlightEnquiryViewSet, EnquiryViewSet,
     DestinationViewSet, DestinationEnquiryViewSet,
-    login_view, refresh_token_view, verify_token_view, logout_view
+    login_view, refresh_token_view, verify_token_view, logout_view,
+    dashboard_stats_view
 )
 
 
@@ -36,6 +37,9 @@ urlpatterns = [
     path('auth/refresh/', refresh_token_view, name='token_refresh'),
     path('auth/verify/', verify_token_view, name='token_verify'),
     path('auth/logout/', logout_view, name='logout'),
+    
+    # Dashboard endpoint
+    path('dashboard/stats/', dashboard_stats_view, name='dashboard_stats'),
 ]
 
 app_name = "api_v1"

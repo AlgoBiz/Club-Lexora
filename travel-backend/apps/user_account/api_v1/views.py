@@ -824,3 +824,51 @@ class DestinationEnquiryViewSet(BaseModelViewSet):
         return self.success_response(
             "Enquiries for destination retrieved successfully.", serializer.data
         )
+
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def dashboard_stats_view(request):
+    """
+    Dashboard API endpoint that provides essential statistics for admin dashboard.
+    Returns counts for hotels, packages, flight enquiries, general enquiries, 
+    featured hotels, and trending hotels.
+    """
+    try:
+        # Hotels count
+        hotels_count = Hotel.objects.filter(is_active=True).count()
+        
+        # Packages count
+        packages_count = Package.objects.filter(is_active=True).count()
+        
+        # Flight Enquiries count
+        flight_enquiries_count = FlightEnquiry.objects.filter(is_active=True).count()
+        
+        # General Enquiries count
+        general_enquiries_count = Enquiry.objects.filter(is_active=True).count()
+        
+        # Featured Hotels count
+        featured_hotels_count = Hotel.objects.filter(is_active=True, is_featured=True).count()
+        
+        # Trending Hotels count
+        trending_hotels_count = Hotel.objects.filter(is_active=True, is_trending=True).count()
+        
+        # Prepare response data
+        data = {
+            "hotels_count": hotels_count,
+            "packages_count": packages_count,
+            "flight_enquiries_count": flight_enquiries_count,
+            "general_enquiries_count": general_enquiries_count,
+            "featured_hotels_count": featured_hotels_count,
+            "trending_hotels_count": trending_hotels_count,
+        }
+        
+        return success_response("Dashboard statistics retrieved successfully.", data)
+        
+    except Exception as e:
+        return error_response(
+            "Failed to retrieve dashboard statistics.",
+            {"error": str(e)},
+            status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
