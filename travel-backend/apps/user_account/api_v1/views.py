@@ -295,12 +295,38 @@ class PackageViewSet(BaseModelViewSet):
     ]
 
     def get_queryset(self):
-        return Package.objects.select_related('destination').only(
+        queryset = Package.objects.select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
             "reviews_count", "category", "type", "is_featured", "is_trending",
             "is_premium", "is_international", "is_kerala", "is_active", "date_added",
         )
+        
+        # Filter by start_date (packages available from this date)
+        start_date = self.request.query_params.get('start_date')
+        if start_date:
+            # Add your date filtering logic here based on your business requirements
+            # Example: queryset = queryset.filter(available_from__lte=start_date)
+            pass
+        
+        # Filter by end_date (packages available until this date)
+        end_date = self.request.query_params.get('end_date')
+        if end_date:
+            # Add your date filtering logic here based on your business requirements
+            # Example: queryset = queryset.filter(available_until__gte=end_date)
+            pass
+        
+        # Filter by number of persons (check if package can accommodate)
+        num_persons = self.request.query_params.get('num_persons')
+        if num_persons:
+            try:
+                num_persons = int(num_persons)
+                # Add your capacity filtering logic here
+                # Example: queryset = queryset.filter(max_capacity__gte=num_persons)
+            except ValueError:
+                pass
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
