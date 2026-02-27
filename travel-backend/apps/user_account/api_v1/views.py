@@ -295,38 +295,13 @@ class PackageViewSet(BaseModelViewSet):
     ]
 
     def get_queryset(self):
-        queryset = Package.objects.select_related('destination').only(
+       return Package.objects.select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
             "reviews_count", "category", "type", "is_featured", "is_trending",
             "is_premium", "is_international", "is_kerala", "is_active", "date_added",
         )
         
-        # Filter by start_date (packages available from this date)
-        start_date = self.request.query_params.get('start_date')
-        if start_date:
-            # Add your date filtering logic here based on your business requirements
-            # Example: queryset = queryset.filter(available_from__lte=start_date)
-            pass
-        
-        # Filter by end_date (packages available until this date)
-        end_date = self.request.query_params.get('end_date')
-        if end_date:
-            # Add your date filtering logic here based on your business requirements
-            # Example: queryset = queryset.filter(available_until__gte=end_date)
-            pass
-        
-        # Filter by number of persons (check if package can accommodate)
-        num_persons = self.request.query_params.get('num_persons')
-        if num_persons:
-            try:
-                num_persons = int(num_persons)
-                # Add your capacity filtering logic here
-                # Example: queryset = queryset.filter(max_capacity__gte=num_persons)
-            except ValueError:
-                pass
-        
-        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -366,13 +341,19 @@ class PackageViewSet(BaseModelViewSet):
 
     @action(detail=False, methods=["get"])
     def featured(self, request):
+        is_international = request.query_params.get("is_international")
         queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+        if is_international is not None:
+            queryset = queryset.filter(is_international=is_international.lower() == "true")
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Featured packages retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def trending(self, request):
+        is_international = request.query_params.get("is_international")
         queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        if is_international is not None:
+            queryset = queryset.filter(is_international=is_international.lower() == "true")
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending packages retrieved successfully.", serializer.data)
 
@@ -393,7 +374,6 @@ class PackageViewSet(BaseModelViewSet):
         queryset = self.get_queryset().filter(destination_id=destination_id, is_active=True)
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Packages by destination retrieved successfully.", serializer.data)
-
 
 class HouseboatViewSet(BaseModelViewSet):
     search_fields = ["name", "route", "description"]
@@ -932,3 +912,11 @@ def dashboard_stats_view(request):
             {"error": str(e)},
             status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def package_category_list(request):
+    """Get list of all package categories"""
+    categories = [{"value": choice[0], "label": choice[1]} for choice in Package.CATEGORY_CHOICES]
+    return success_response("Package categories retrieved successfully.", categories) 

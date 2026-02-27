@@ -5,7 +5,7 @@ from apps.user_account.api_v1.views import (
     CruiseViewSet, IslandStayViewSet, FlightEnquiryViewSet, EnquiryViewSet,
     DestinationViewSet, DestinationEnquiryViewSet,
     login_view, refresh_token_view, verify_token_view, logout_view,
-    dashboard_stats_view
+    dashboard_stats_view, package_category_list
 )
 
 
@@ -40,6 +40,9 @@ urlpatterns = [
     
     # Dashboard endpoint
     path('dashboard/stats/', dashboard_stats_view, name='dashboard_stats'),
+    
+    # Package categories endpoint
+    path('package-categories/', package_category_list, name='package_categories'),
 ]
 
 app_name = "api_v1"

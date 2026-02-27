@@ -194,13 +194,16 @@ class Destination(BaseModel):
 
 class Package(BaseModel):
     CATEGORY_CHOICES = [
-        ("international", "International"),
-        ("kerala", "Kerala Tourism"),
+        # ("international", "International"),
+        # ("kerala", "Kerala Tourism"),
         ("ayurveda", "Ayurveda"),
         ("healthcare", "Healthcare"),
         ("cultural", "Cultural"),
         ("adventure", "Adventure"),
         ("beach", "Beach"),
+        ("family_tour", "Family Tour"),
+        ("luxury_escape", "Luxury Escape"),
+        ("decorator", "Decorator"),
     ]
 
     TYPE_CHOICES = [
