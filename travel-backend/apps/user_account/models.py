@@ -177,6 +177,20 @@ class Hotel(BaseModel):
     def __str__(self):
         return self.name
 
+class Destination(BaseModel):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    location = models.CharField(max_length=255, null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    is_international = models.BooleanField(default=False)
+    
+    class Meta:
+        ordering = ["-date_added"]
+        verbose_name = "Destination"
+        verbose_name_plural = "Destinations"
+
+    def __str__(self):
+        return self.name
 
 class Package(BaseModel):
     CATEGORY_CHOICES = [
@@ -196,6 +210,7 @@ class Package(BaseModel):
 
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
+    destination = models.ForeignKey(Destination, on_delete=models.CASCADE, related_name='packages')
     location = models.CharField(max_length=255)
     description = models.TextField()
     duration = models.CharField(max_length=100, help_text="e.g., 5 Days / 4 Nights")
@@ -403,16 +418,17 @@ class Enquiry(BaseModel):
         ("cancelled", "Cancelled"),
     ]
 
-    name = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=30)
-    service = models.CharField(max_length=50, choices=SERVICE_CHOICES)
-    destination = models.CharField(max_length=255, blank=True)
+    # Basic fields
+    name = models.CharField(max_length=255, null=True, blank=True)
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=30, null=True, blank=True)
+    service = models.CharField(max_length=50, choices=SERVICE_CHOICES, null=True, blank=True)
+    destination = models.CharField(max_length=255, null=True, blank=True)
     travel_date = models.DateField(null=True, blank=True)
-    travelers = models.CharField(max_length=50, blank=True)
-    message = models.TextField()
+    travelers = models.CharField(max_length=50, null=True, blank=True)
+    message = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
-    follow_up_notes = models.TextField(blank=True)
+    follow_up_notes = models.TextField(null=True, blank=True)
     assigned_to = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -421,6 +437,26 @@ class Enquiry(BaseModel):
         related_name="enquiries",
     )
 
+    # Hotel-specific fields
+    check_in_date = models.DateField(null=True, blank=True)
+    check_out_date = models.DateField(null=True, blank=True)
+    rooms = models.CharField(max_length=50, null=True, blank=True)
+    guests = models.CharField(max_length=50, null=True, blank=True)
+
+    # Island Stay-specific fields
+    island_duration = models.CharField(max_length=100, null=True, blank=True)
+
+    # Houseboat-specific fields
+    houseboat_duration = models.CharField(max_length=100, null=True, blank=True)
+    bedrooms = models.CharField(max_length=50, null=True, blank=True)
+    boarding_date = models.DateField(null=True, blank=True)
+
+    # Cruise-specific fields
+    preferred_departure_date = models.DateField(null=True, blank=True)
+    cruise_duration = models.CharField(max_length=100, null=True, blank=True)
+    passengers = models.CharField(max_length=50, null=True, blank=True)
+    cabin_type = models.CharField(max_length=100, null=True, blank=True)
+
     class Meta:
         ordering = ["-date_added"]
         verbose_name = "Enquiry"
@@ -428,39 +464,6 @@ class Enquiry(BaseModel):
 
     def __str__(self):
         return f"{self.name} - {self.service}"
-
-
-class Destination(BaseModel):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=255, unique=True)
-    location = models.CharField(max_length=255, null=True, blank=True)
-    description = models.TextField(null=True, blank=True)
-    number_of_days = models.IntegerField(null=True, blank=True)
-    number_of_nights = models.IntegerField(null=True, blank=True)
-    pickup_location = models.CharField(max_length=255, null=True, blank=True)
-    drop_location = models.CharField(max_length=255, null=True, blank=True)
-    transportation_mode = models.CharField(max_length=50, null=True, blank=True)
-    stay_type = models.CharField(max_length=50, null=True, blank=True)
-    meals_included = models.TextField(null=True, blank=True, help_text="Details about meals included")
-    guide = models.BooleanField(default=False)
-    destinations = models.TextField(null=True, blank=True, help_text="Comma-separated destinations")
-    inclusions = models.TextField(null=True, blank=True, help_text="Comma-separated inclusions")
-    exclusions = models.TextField(null=True, blank=True, help_text="Comma-separated exclusions")
-    video_link = models.URLField(max_length=500, null=True, blank=True)
-    video_description = models.TextField(null=True, blank=True)
-    image_1 = models.ImageField(upload_to="destinations/", null=True, blank=True)
-    image_2 = models.ImageField(upload_to="destinations/", null=True, blank=True)
-    image_3 = models.ImageField(upload_to="destinations/", null=True, blank=True)
-    is_featured = models.BooleanField(default=False)
-    is_trending = models.BooleanField(default=False)
-
-    class Meta:
-        ordering = ["-date_added"]
-        verbose_name = "Destination"
-        verbose_name_plural = "Destinations"
-
-    def __str__(self):
-        return self.name
 
 
 class DestinationEnquiry(BaseModel):

@@ -115,15 +115,16 @@ class HotelCreateUpdateSerializer(serializers.ModelSerializer):
 class PackageListSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
+    destination_name = serializers.CharField(source='destination.name', read_only=True)
 
     class Meta:
         model = Package
         fields = [
-            "id", "auto_id", "title", "slug", "location", "duration",
-            "group_size", "price", "original_price", "discount_percentage",
-            "image_url", "rating", "reviews_count", "category", "type",
-            "is_featured", "is_trending", "is_premium", "is_international",
-            "is_kerala", "is_active",
+            "id", "auto_id", "title", "slug", "destination", "destination_name",
+            "location", "duration", "group_size", "price", "original_price",
+            "discount_percentage", "image_url", "rating", "reviews_count",
+            "category", "type", "is_featured", "is_trending", "is_premium",
+            "is_international", "is_kerala", "is_active",
         ]
 
     def get_image_url(self, obj):
@@ -143,6 +144,8 @@ class PackageDetailSerializer(serializers.ModelSerializer):
     exclusions_list = serializers.SerializerMethodField()
     highlights_list = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
+    destination_name = serializers.CharField(source='destination.name', read_only=True)
+    destination_location = serializers.CharField(source='destination.location', read_only=True)
 
     class Meta:
         model = Package
@@ -404,6 +407,14 @@ class EnquiryListSerializer(serializers.ModelSerializer):
             "id", "auto_id", "name", "email", "phone", "service",
             "destination", "travel_date", "travelers", "status",
             "assigned_to_name", "date_added", "is_active",
+            # Hotel fields
+            "check_in_date", "check_out_date", "rooms", "guests",
+            # Island Stay fields
+            "island_duration",
+            # Houseboat fields
+            "houseboat_duration", "bedrooms", "boarding_date",
+            # Cruise fields
+            "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
         ]
 
 
@@ -418,104 +429,68 @@ class EnquiryDetailSerializer(serializers.ModelSerializer):
 class EnquiryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enquiry
-        fields = ["name", "email", "phone", "service", "destination", "travel_date", "travelers", "message"]
-
-    def validate_message(self, value):
-        if len(value) < 10:
-            raise serializers.ValidationError("Message must be at least 10 characters long.")
-        return value
+        fields = [
+            "name", "email", "phone", "service", "destination", "travel_date", 
+            "travelers", "message",
+            # Hotel fields
+            "check_in_date", "check_out_date", "rooms", "guests",
+            # Island Stay fields
+            "island_duration",
+            # Houseboat fields
+            "houseboat_duration", "bedrooms", "boarding_date",
+            # Cruise fields
+            "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
+        ]
+        extra_kwargs = {
+            "name": {"required": False},
+            "email": {"required": False},
+            "phone": {"required": False},
+            "service": {"required": False},
+            "destination": {"required": False},
+            "travel_date": {"required": False},
+            "travelers": {"required": False},
+            "message": {"required": False},
+        }
 
 
 class EnquiryUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enquiry
-        fields = ["status", "follow_up_notes", "assigned_to"]
+        fields = [
+            "status", "follow_up_notes", "assigned_to",
+            # All enquiry fields for update
+            "name", "email", "phone", "service", "destination", "travel_date", 
+            "travelers", "message",
+            # Hotel fields
+            "check_in_date", "check_out_date", "rooms", "guests",
+            # Island Stay fields
+            "island_duration",
+            # Houseboat fields
+            "houseboat_duration", "bedrooms", "boarding_date",
+            # Cruise fields
+            "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
+        ]
 
 
 class DestinationListSerializer(serializers.ModelSerializer):
-    image_1_url = serializers.SerializerMethodField()
-    image_2_url = serializers.SerializerMethodField()
-    image_3_url = serializers.SerializerMethodField()
-    destinations_list = serializers.SerializerMethodField()
-
     class Meta:
         model = Destination
         fields = [
-            "id", "auto_id", "name", "slug", "location", "number_of_days",
-            "number_of_nights", "pickup_location", "drop_location",
-            "transportation_mode", "stay_type", "guide", "destinations_list",
-            "image_1_url", "image_2_url", "image_3_url", "is_featured",
-            "is_trending", "is_active",
+            "id", "auto_id", "name", "slug", "location", "description",
+            "is_international", "is_active",
         ]
-
-    def get_image_1_url(self, obj):
-        return _build_absolute_uri(self.context.get("request"), obj.image_1)
-
-    def get_image_2_url(self, obj):
-        return _build_absolute_uri(self.context.get("request"), obj.image_2)
-
-    def get_image_3_url(self, obj):
-        return _build_absolute_uri(self.context.get("request"), obj.image_3)
-
-    def get_destinations_list(self, obj):
-        return _parse_comma_separated(obj.destinations)
 
 
 class DestinationDetailSerializer(serializers.ModelSerializer):
-    image_1_url = serializers.SerializerMethodField()
-    image_2_url = serializers.SerializerMethodField()
-    image_3_url = serializers.SerializerMethodField()
-    destinations_list = serializers.SerializerMethodField()
-    inclusions_list = serializers.SerializerMethodField()
-    exclusions_list = serializers.SerializerMethodField()
-
     class Meta:
         model = Destination
         fields = "__all__"
-
-    def get_image_1_url(self, obj):
-        return _build_absolute_uri(self.context.get("request"), obj.image_1)
-
-    def get_image_2_url(self, obj):
-        return _build_absolute_uri(self.context.get("request"), obj.image_2)
-
-    def get_image_3_url(self, obj):
-        return _build_absolute_uri(self.context.get("request"), obj.image_3)
-
-    def get_destinations_list(self, obj):
-        return _parse_comma_separated(obj.destinations)
-
-    def get_inclusions_list(self, obj):
-        return _parse_comma_separated(obj.inclusions)
-
-    def get_exclusions_list(self, obj):
-        return _parse_comma_separated(obj.exclusions)
 
 
 class DestinationCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Destination
         exclude = ["auto_id", "date_added", "date_updated"]
-
-    def validate_number_of_days(self, value):
-        if value < 1:
-            raise serializers.ValidationError("Number of days must be at least 1.")
-        return value
-
-    def validate_number_of_nights(self, value):
-        if value < 0:
-            raise serializers.ValidationError("Number of nights cannot be negative.")
-        return value
-
-    def validate(self, data):
-        number_of_days = data.get("number_of_days")
-        number_of_nights = data.get("number_of_nights")
-        if number_of_days and number_of_nights:
-            if number_of_nights > number_of_days:
-                raise serializers.ValidationError(
-                    {"number_of_nights": "Number of nights cannot exceed number of days."}
-                )
-        return data
 
 
 class DestinationEnquiryListSerializer(serializers.ModelSerializer):

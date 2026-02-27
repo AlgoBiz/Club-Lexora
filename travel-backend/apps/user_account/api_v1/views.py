@@ -151,6 +151,34 @@ class BaseModelViewSet(viewsets.ModelViewSet):
             return [IsAdminUser()]
         return [AllowAny()]
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            paginated_response = self.get_paginated_response(serializer.data)
+            
+            # Transform to custom format with results array
+            return Response({
+                "message": "Data retrieved successfully.",
+                "data": {
+                    "results": paginated_response.data.get("results", []),
+                    "count": paginated_response.data.get("count", 0),
+                    "next": paginated_response.data.get("next"),
+                    "previous": paginated_response.data.get("previous"),
+                }
+            })
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "message": "Data retrieved successfully.",
+            "data": {
+                "results": serializer.data,
+                "count": len(serializer.data),
+            }
+        })
+
     def success_response(self, message, data=None, status_code=status.HTTP_200_OK):
         return success_response(message, data, status_code)
 
@@ -262,13 +290,13 @@ class PackageViewSet(BaseModelViewSet):
     search_fields = ["title", "location", "description"]
     ordering_fields = ["price", "rating", "date_added"]
     filterset_fields = [
-        "category", "type", "is_featured", "is_trending",
+        "category", "type", "destination", "is_featured", "is_trending",
         "is_premium", "is_international", "is_kerala", "is_active",
     ]
 
     def get_queryset(self):
-        return Package.objects.only(
-            "id", "auto_id", "title", "slug", "location", "duration",
+        return Package.objects.select_related('destination').only(
+            "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
             "reviews_count", "category", "type", "is_featured", "is_trending",
             "is_premium", "is_international", "is_kerala", "is_active", "date_added",
@@ -333,6 +361,12 @@ class PackageViewSet(BaseModelViewSet):
         queryset = self.get_queryset().filter(is_international=True, is_active=True)
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("International packages retrieved successfully.", serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="destination/(?P<destination_id>[^/.]+)")
+    def by_destination(self, request, destination_id=None):
+        queryset = self.get_queryset().filter(destination_id=destination_id, is_active=True)
+        serializer = PackageListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response("Packages by destination retrieved successfully.", serializer.data)
 
 
 class HouseboatViewSet(BaseModelViewSet):
@@ -677,20 +711,14 @@ class EnquiryViewSet(BaseModelViewSet):
 
 
 class DestinationViewSet(BaseModelViewSet):
-    search_fields = ["name", "location", "description", "destinations"]
-    ordering_fields = ["number_of_days", "date_added"]
-    filterset_fields = [
-        "transportation_mode", "stay_type", "guide", "is_featured",
-        "is_trending", "is_active",
-    ]
+    search_fields = ["name", "location", "description"]
+    ordering_fields = ["name", "date_added"]
+    filterset_fields = ["is_international", "is_active"]
 
     def get_queryset(self):
         return Destination.objects.only(
-            "id", "auto_id", "name", "slug", "location", "number_of_days",
-            "number_of_nights", "pickup_location", "drop_location",
-            "transportation_mode", "stay_type", "guide", "destinations",
-            "image_1", "image_2", "image_3", "is_featured", "is_trending",
-            "is_active", "date_added",
+            "id", "auto_id", "name", "slug", "location", "description",
+            "is_international", "is_active", "date_added",
         )
 
     def get_serializer_class(self):
@@ -730,10 +758,16 @@ class DestinationViewSet(BaseModelViewSet):
         return self.success_response("Destination deleted successfully.")
 
     @action(detail=False, methods=["get"])
-    def featured(self, request):
-        queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+    def international(self, request):
+        queryset = self.get_queryset().filter(is_international=True, is_active=True)
         serializer = DestinationListSerializer(queryset, many=True, context={"request": request})
-        return self.success_response("Featured destinations retrieved successfully.", serializer.data)
+        return self.success_response("International destinations retrieved successfully.", serializer.data)
+
+    @action(detail=False, methods=["get"])
+    def domestic(self, request):
+        queryset = self.get_queryset().filter(is_international=False, is_active=True)
+        serializer = DestinationListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response("Domestic destinations retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def trending(self, request):
