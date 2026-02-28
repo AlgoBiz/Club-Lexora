@@ -507,3 +507,16 @@ class DestinationEnquiry(BaseModel):
 
     def __str__(self):
         return f"{self.full_name} - {self.destination.name}"
+
+
+class OfferBanner(BaseModel):
+    name = models.CharField(max_length=255)
+    image = models.ImageField(upload_to="offer_banners/")
+
+    class Meta:
+        ordering = ["-date_added"]
+        verbose_name = "Offer Banner"
+        verbose_name_plural = "Offer Banners"
+
+    def __str__(self):
+        return self.name

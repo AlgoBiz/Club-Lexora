@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
-    Destination, DestinationEnquiry
+    Destination, DestinationEnquiry, OfferBanner
 )
 
 User = get_user_model()
@@ -541,3 +541,16 @@ class DestinationEnquiryUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = DestinationEnquiry
         fields = ["status", "follow_up_notes", "assigned_to"]
+
+
+
+class OfferBannerSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OfferBanner
+        fields = ["id", "auto_id", "name", "image", "image_url", "date_added"]
+        read_only_fields = ["id", "auto_id", "date_added"]
+
+    def get_image_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image)

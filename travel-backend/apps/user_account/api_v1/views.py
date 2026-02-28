@@ -10,7 +10,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
-    Destination, DestinationEnquiry
+    Destination, DestinationEnquiry, OfferBanner
 )
 from apps.user_account.api_v1.serializers import (
     UserSerializer, UserDetailSerializer, ChangePasswordSerializer,
@@ -26,6 +26,7 @@ from apps.user_account.api_v1.serializers import (
     DestinationListSerializer, DestinationDetailSerializer, DestinationCreateUpdateSerializer,
     DestinationEnquiryListSerializer, DestinationEnquiryDetailSerializer,
     DestinationEnquiryCreateSerializer, DestinationEnquiryUpdateSerializer,
+    OfferBannerSerializer,
 )
 
 User = get_user_model()
@@ -997,3 +998,48 @@ def package_category_list(request):
     """Get list of all package categories"""
     categories = [{"value": choice[0], "label": choice[1]} for choice in Package.CATEGORY_CHOICES]
     return success_response("Package categories retrieved successfully.", categories) 
+
+
+
+class OfferBannerViewSet(BaseModelViewSet):
+    queryset = OfferBanner.objects.all()
+    serializer_class = OfferBannerSerializer
+    search_fields = ["name"]
+    ordering_fields = ["date_added", "name"]
+    
+    def get_permissions(self):
+        """
+        GET (list, retrieve) - Allow any
+        POST, PUT, PATCH, DELETE - Require authentication
+        """
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        return [IsAuthenticated()]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        banner = serializer.save()
+        return self.success_response(
+            "Offer banner created successfully.",
+            OfferBannerSerializer(banner, context={"request": request}).data,
+            status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        banner = serializer.save()
+        return self.success_response(
+            "Offer banner updated successfully.",
+            OfferBannerSerializer(banner, context={"request": request}).data,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return self.success_response("Offer banner deleted successfully.")

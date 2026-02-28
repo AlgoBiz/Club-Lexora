@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 from apps.user_account.models import (
-    User, Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry
+    User, Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry, OfferBanner
 )
 
 
@@ -299,3 +299,21 @@ class EnquiryAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("assigned_to")
+
+
+
+@admin.register(OfferBanner)
+class OfferBannerAdmin(admin.ModelAdmin):
+    list_display = ("auto_id", "name", "image", "date_added")
+    search_fields = ("name",)
+    readonly_fields = ("id", "auto_id", "date_added", "date_updated")
+    
+    fieldsets = (
+        ("Banner Information", {
+            "fields": ("name", "image")
+        }),
+        ("System Fields", {
+            "fields": ("id", "auto_id", "date_added", "date_updated"),
+            "classes": ("collapse",),
+        }),
+    )

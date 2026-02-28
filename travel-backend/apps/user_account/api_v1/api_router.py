@@ -3,7 +3,7 @@ from django.urls import path
 from apps.user_account.api_v1.views import (
     UserViewSet, HotelViewSet, PackageViewSet, HouseboatViewSet,
     CruiseViewSet, IslandStayViewSet, FlightEnquiryViewSet, EnquiryViewSet,
-    DestinationViewSet, DestinationEnquiryViewSet,
+    DestinationViewSet, DestinationEnquiryViewSet, OfferBannerViewSet,
     login_view, refresh_token_view, verify_token_view, logout_view,
     dashboard_stats_view, package_category_list
 )
@@ -29,6 +29,7 @@ router.register(r"flight-enquiries", FlightEnquiryViewSet, basename="flight-enqu
 router.register(r"enquiries", EnquiryViewSet, basename="enquiry")
 router.register(r"destinations", DestinationViewSet, basename="destination")
 router.register(r"destination-enquiries", DestinationEnquiryViewSet, basename="destination-enquiry")
+router.register(r"offer-banners", OfferBannerViewSet, basename="offer-banner")
 
 
 urlpatterns = [
