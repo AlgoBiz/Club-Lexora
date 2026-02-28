@@ -231,11 +231,29 @@ class HotelViewSet(BaseModelViewSet):
     # permission_classes = [AllowAny]
 
     def get_queryset(self):
-        return Hotel.objects.only(
+        queryset = Hotel.objects.only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price_per_night", "image", "amenities", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
         )
+        
+        # Price filtering
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+        
+        if min_price:
+            try:
+                queryset = queryset.filter(price_per_night__gte=float(min_price))
+            except (ValueError, TypeError):
+                pass
+        
+        if max_price:
+            try:
+                queryset = queryset.filter(price_per_night__lte=float(max_price))
+            except (ValueError, TypeError):
+                pass
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -295,12 +313,57 @@ class PackageViewSet(BaseModelViewSet):
     ]
 
     def get_queryset(self):
-       return Package.objects.select_related('destination').only(
+        queryset = Package.objects.select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
             "reviews_count", "category", "type", "is_featured", "is_trending",
             "is_premium", "is_international", "is_kerala", "is_active", "date_added",
         )
+        
+        # Price filtering
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+        
+        if min_price:
+            try:
+                queryset = queryset.filter(price__gte=float(min_price))
+            except (ValueError, TypeError):
+                pass
+        
+        if max_price:
+            try:
+                queryset = queryset.filter(price__lte=float(max_price))
+            except (ValueError, TypeError):
+                pass
+        
+        return queryset
+    def get_object(self):
+        """
+        Retrieve package by slug, UUID (id), or auto_id.
+        Supports /packages/{slug}/, /packages/{uuid}/, and /packages/{auto_id}/ endpoints.
+        """
+        from django.shortcuts import get_object_or_404
+        import uuid
+
+        lookup_value = self.kwargs.get(self.lookup_field)
+
+        # Try to parse as UUID first (id field)
+        try:
+            uuid_obj = uuid.UUID(lookup_value)
+            return get_object_or_404(self.get_queryset(), id=uuid_obj)
+        except (ValueError, AttributeError):
+            pass
+        
+        # Try to parse as integer (auto_id field)
+        try:
+            auto_id = int(lookup_value)
+            return get_object_or_404(self.get_queryset(), auto_id=auto_id)
+        except (ValueError, TypeError):
+            pass
+        
+        # Otherwise treat as slug
+        return get_object_or_404(self.get_queryset(), slug=lookup_value)
+
         
 
     def get_serializer_class(self):
