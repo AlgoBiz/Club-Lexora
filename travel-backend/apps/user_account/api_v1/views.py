@@ -232,7 +232,7 @@ class HotelViewSet(BaseModelViewSet):
     # permission_classes = [AllowAny]
 
     def get_queryset(self):
-        queryset = Hotel.objects.only(
+        queryset = Hotel.objects.filter(is_active=True).only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price_per_night", "image", "amenities", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
@@ -314,7 +314,7 @@ class PackageViewSet(BaseModelViewSet):
     ]
 
     def get_queryset(self):
-        queryset = Package.objects.select_related('destination').only(
+        queryset = Package.objects.filter(is_active=True).select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
             "reviews_count", "category", "type", "is_featured", "is_trending",
@@ -459,7 +459,7 @@ class HouseboatViewSet(BaseModelViewSet):
     filterset_fields = ["type", "is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return Houseboat.objects.only(
+        return Houseboat.objects.filter(is_active=True).only(
             "id", "auto_id", "name", "slug", "type", "capacity", "bedrooms",
             "route", "duration", "price", "image", "features", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
@@ -520,7 +520,7 @@ class CruiseViewSet(BaseModelViewSet):
     filterset_fields = ["is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return Cruise.objects.only(
+        return Cruise.objects.filter(is_active=True).only(
             "id", "auto_id", "name", "slug", "cruise_line", "route",
             "duration", "departures", "price", "image", "highlights",
             "is_featured", "is_trending", "is_premium", "is_active", "date_added",
@@ -581,7 +581,7 @@ class IslandStayViewSet(BaseModelViewSet):
     filterset_fields = ["rating", "is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return IslandStay.objects.only(
+        return IslandStay.objects.filter(is_active=True).only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price", "duration", "image", "features", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
@@ -642,7 +642,7 @@ class FlightEnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "trip_type", "travel_class", "is_active"]
 
     def get_queryset(self):
-        return FlightEnquiry.objects.select_related("assigned_to").only(
+        return FlightEnquiry.objects.filter(is_active=True).select_related("assigned_to").only(
             "id", "auto_id", "name", "email", "phone", "from_location",
             "to_location", "departure_date", "return_date", "trip_type",
             "adults", "children", "travel_class", "status", "assigned_to",
@@ -716,7 +716,7 @@ class EnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "service", "is_active"]
 
     def get_queryset(self):
-        return Enquiry.objects.select_related("assigned_to").only(
+        return Enquiry.objects.filter(is_active=True).select_related("assigned_to").only(
             "id", "auto_id", "name", "email", "phone", "service",
             "destination", "travel_date", "travelers", "status",
             "assigned_to", "date_added", "is_active",
@@ -800,7 +800,7 @@ class DestinationViewSet(BaseModelViewSet):
     filterset_fields = ["is_international", "is_active"]
 
     def get_queryset(self):
-        return Destination.objects.only(
+        return Destination.objects.filter(is_active=True).only(
             "id", "auto_id", "name", "slug", "location", "description",
             "is_international", "is_active", "date_added",
         )
@@ -866,7 +866,7 @@ class DestinationEnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "destination", "flight_ticket_required", "is_active"]
 
     def get_queryset(self):
-        return DestinationEnquiry.objects.select_related("destination", "assigned_to").only(
+        return DestinationEnquiry.objects.filter(is_active=True).select_related("destination", "assigned_to").only(
             "id", "auto_id", "destination", "full_name", "email", "phone",
             "start_date", "end_date", "number_of_pax", "flight_ticket_required",
             "status", "assigned_to", "date_added", "is_active",
@@ -1002,7 +1002,7 @@ def package_category_list(request):
 
 
 class OfferBannerViewSet(BaseModelViewSet):
-    queryset = OfferBanner.objects.all()
+    queryset = OfferBanner.objects.filter(is_active=True)
     serializer_class = OfferBannerSerializer
     search_fields = ["name"]
     ordering_fields = ["date_added", "name"]
