@@ -438,6 +438,20 @@ class PackageViewSet(BaseModelViewSet):
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Packages by destination retrieved successfully.", serializer.data)
 
+    @action(detail=False, methods=["get"])
+    def discounted(self, request):
+        from django.db.models import F
+        
+        # Filter packages where original_price > price (discounted packages)
+        queryset = self.get_queryset().filter(
+            is_active=True,
+            original_price__isnull=False,
+            original_price__gt=F('price')
+        )
+        
+        serializer = PackageListSerializer(queryset, many=True, context={"request": request})
+        return self.success_response("Discounted packages retrieved successfully.", serializer.data)
+
 class HouseboatViewSet(BaseModelViewSet):
     search_fields = ["name", "route", "description"]
     ordering_fields = ["price", "bedrooms", "date_added"]
