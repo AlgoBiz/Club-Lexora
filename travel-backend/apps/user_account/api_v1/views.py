@@ -252,6 +252,10 @@ class HotelViewSet(BaseModelViewSet):
             "is_trending", "is_premium", "is_active", "date_added",
         )
         
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
         # Price filtering
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
@@ -337,6 +341,10 @@ class PackageViewSet(BaseModelViewSet):
             "reviews_count", "category", "type", "is_featured", "is_trending",
             "is_premium", "is_international", "is_kerala", "is_active", "date_added",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         
         # Price filtering
         min_price = self.request.query_params.get('min_price')
@@ -486,11 +494,17 @@ class HouseboatViewSet(BaseModelViewSet):
     filterset_fields = ["type", "is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return Houseboat.objects.all().only(
+        queryset = Houseboat.objects.all().only(
             "id", "auto_id", "name", "slug", "type", "capacity", "bedrooms",
             "route", "duration", "price", "image", "features", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -550,11 +564,17 @@ class CruiseViewSet(BaseModelViewSet):
     filterset_fields = ["is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return Cruise.objects.all().only(
+        queryset = Cruise.objects.all().only(
             "id", "auto_id", "name", "slug", "cruise_line", "route",
             "duration", "departures", "price", "image", "highlights",
             "is_featured", "is_trending", "is_premium", "is_active", "date_added",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -614,11 +634,17 @@ class IslandStayViewSet(BaseModelViewSet):
     filterset_fields = ["rating", "is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return IslandStay.objects.all().only(
+        queryset = IslandStay.objects.all().only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price", "duration", "image", "features", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -678,12 +704,18 @@ class FlightEnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "trip_type", "travel_class", "is_active"]
 
     def get_queryset(self):
-        return FlightEnquiry.objects.all().select_related("assigned_to").only(
+        queryset = FlightEnquiry.objects.all().select_related("assigned_to").only(
             "id", "auto_id", "name", "email", "phone", "from_location",
             "to_location", "departure_date", "return_date", "trip_type",
             "adults", "children", "travel_class", "status", "assigned_to",
             "date_added", "is_active",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -755,11 +787,17 @@ class EnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "service", "is_active"]
 
     def get_queryset(self):
-        return Enquiry.objects.all().select_related("assigned_to").only(
+        queryset = Enquiry.objects.all().select_related("assigned_to").only(
             "id", "auto_id", "name", "email", "phone", "service",
             "destination", "travel_date", "travelers", "status",
             "assigned_to", "date_added", "is_active",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -844,10 +882,16 @@ class DestinationViewSet(BaseModelViewSet):
     filterset_fields = ["is_international", "is_active"]
 
     def get_queryset(self):
-        return Destination.objects.all().only(
+        queryset = Destination.objects.all().only(
             "id", "auto_id", "name", "slug", "location", "description",
             "is_international", "is_active", "date_added",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -915,11 +959,17 @@ class DestinationEnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "destination", "flight_ticket_required", "is_active"]
 
     def get_queryset(self):
-        return DestinationEnquiry.objects.all().select_related("destination", "assigned_to").only(
+        queryset = DestinationEnquiry.objects.all().select_related("destination", "assigned_to").only(
             "id", "auto_id", "destination", "full_name", "email", "phone",
             "start_date", "end_date", "number_of_pax", "flight_ticket_required",
             "status", "assigned_to", "date_added", "is_active",
         )
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -1056,10 +1106,18 @@ def package_category_list(request):
 
 
 class OfferBannerViewSet(BaseModelViewSet):
-    queryset = OfferBanner.objects.all()
     serializer_class = OfferBannerSerializer
     search_fields = ["name"]
     ordering_fields = ["date_added", "name"]
+    
+    def get_queryset(self):
+        queryset = OfferBanner.objects.all()
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
     
     def get_permissions(self):
         """
