@@ -151,6 +151,20 @@ class BaseModelViewSet(viewsets.ModelViewSet):
         if self.action in ["create", "update", "partial_update", "destroy"]:
             return [IsAdminUser()]
         return [AllowAny()]
+    
+    def get_queryset(self):
+        """
+        Authenticated users see all records (active and inactive).
+        Unauthenticated users only see active records.
+        """
+        queryset = super().get_queryset()
+        
+        # If user is not authenticated, filter to only active records
+        if not self.request.user.is_authenticated:
+            if hasattr(queryset.model, 'is_active'):
+                queryset = queryset.filter(is_active=True)
+        
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -232,7 +246,7 @@ class HotelViewSet(BaseModelViewSet):
     # permission_classes = [AllowAny]
 
     def get_queryset(self):
-        queryset = Hotel.objects.filter(is_active=True).only(
+        queryset = Hotel.objects.all().only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price_per_night", "image", "amenities", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
@@ -288,19 +302,22 @@ class HotelViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Hotel deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def featured(self, request):
-        queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+        queryset = self.get_queryset().filter(is_featured=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = HotelListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Featured hotels retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def trending(self, request):
-        queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        queryset = self.get_queryset().filter(is_trending=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = HotelListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending hotels retrieved successfully.", serializer.data)
 
@@ -314,7 +331,7 @@ class PackageViewSet(BaseModelViewSet):
     ]
 
     def get_queryset(self):
-        queryset = Package.objects.filter(is_active=True).select_related('destination').only(
+        queryset = Package.objects.all().select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
             "reviews_count", "category", "type", "is_featured", "is_trending",
@@ -399,14 +416,15 @@ class PackageViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Package deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def featured(self, request):
         is_international = request.query_params.get("is_international")
-        queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+        queryset = self.get_queryset().filter(is_featured=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         if is_international is not None:
             queryset = queryset.filter(is_international=is_international.lower() == "true")
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
@@ -415,7 +433,9 @@ class PackageViewSet(BaseModelViewSet):
     @action(detail=False, methods=["get"])
     def trending(self, request):
         is_international = request.query_params.get("is_international")
-        queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        queryset = self.get_queryset().filter(is_trending=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         if is_international is not None:
             queryset = queryset.filter(is_international=is_international.lower() == "true")
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
@@ -423,19 +443,25 @@ class PackageViewSet(BaseModelViewSet):
 
     @action(detail=False, methods=["get"])
     def kerala(self, request):
-        queryset = self.get_queryset().filter(is_kerala=True, is_active=True)
+        queryset = self.get_queryset().filter(is_kerala=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Kerala packages retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def international(self, request):
-        queryset = self.get_queryset().filter(is_international=True, is_active=True)
+        queryset = self.get_queryset().filter(is_international=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("International packages retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"], url_path="destination/(?P<destination_id>[^/.]+)")
     def by_destination(self, request, destination_id=None):
-        queryset = self.get_queryset().filter(destination_id=destination_id, is_active=True)
+        queryset = self.get_queryset().filter(destination_id=destination_id)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Packages by destination retrieved successfully.", serializer.data)
 
@@ -445,10 +471,11 @@ class PackageViewSet(BaseModelViewSet):
         
         # Filter packages where original_price > price (discounted packages)
         queryset = self.get_queryset().filter(
-            is_active=True,
             original_price__isnull=False,
             original_price__gt=F('price')
         )
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         
         serializer = PackageListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Discounted packages retrieved successfully.", serializer.data)
@@ -459,7 +486,7 @@ class HouseboatViewSet(BaseModelViewSet):
     filterset_fields = ["type", "is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return Houseboat.objects.filter(is_active=True).only(
+        return Houseboat.objects.all().only(
             "id", "auto_id", "name", "slug", "type", "capacity", "bedrooms",
             "route", "duration", "price", "image", "features", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
@@ -497,19 +524,22 @@ class HouseboatViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Houseboat deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def featured(self, request):
-        queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+        queryset = self.get_queryset().filter(is_featured=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = HouseboatListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Featured houseboats retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def trending(self, request):
-        queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        queryset = self.get_queryset().filter(is_trending=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = HouseboatListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending houseboats retrieved successfully.", serializer.data)
 
@@ -520,7 +550,7 @@ class CruiseViewSet(BaseModelViewSet):
     filterset_fields = ["is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return Cruise.objects.filter(is_active=True).only(
+        return Cruise.objects.all().only(
             "id", "auto_id", "name", "slug", "cruise_line", "route",
             "duration", "departures", "price", "image", "highlights",
             "is_featured", "is_trending", "is_premium", "is_active", "date_added",
@@ -558,19 +588,22 @@ class CruiseViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Cruise deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def featured(self, request):
-        queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+        queryset = self.get_queryset().filter(is_featured=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = CruiseListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Featured cruises retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def trending(self, request):
-        queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        queryset = self.get_queryset().filter(is_trending=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = CruiseListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending cruises retrieved successfully.", serializer.data)
 
@@ -581,7 +614,7 @@ class IslandStayViewSet(BaseModelViewSet):
     filterset_fields = ["rating", "is_featured", "is_trending", "is_premium", "is_active"]
 
     def get_queryset(self):
-        return IslandStay.objects.filter(is_active=True).only(
+        return IslandStay.objects.all().only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price", "duration", "image", "features", "is_featured",
             "is_trending", "is_premium", "is_active", "date_added",
@@ -619,19 +652,22 @@ class IslandStayViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Island stay deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def featured(self, request):
-        queryset = self.get_queryset().filter(is_featured=True, is_active=True)
+        queryset = self.get_queryset().filter(is_featured=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = IslandStayListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Featured island stays retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def trending(self, request):
-        queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        queryset = self.get_queryset().filter(is_trending=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = IslandStayListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending island stays retrieved successfully.", serializer.data)
 
@@ -642,7 +678,7 @@ class FlightEnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "trip_type", "travel_class", "is_active"]
 
     def get_queryset(self):
-        return FlightEnquiry.objects.filter(is_active=True).select_related("assigned_to").only(
+        return FlightEnquiry.objects.all().select_related("assigned_to").only(
             "id", "auto_id", "name", "email", "phone", "from_location",
             "to_location", "departure_date", "return_date", "trip_type",
             "adults", "children", "travel_class", "status", "assigned_to",
@@ -690,20 +726,23 @@ class FlightEnquiryViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Flight enquiry deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def pending(self, request):
-        queryset = self.get_queryset().filter(status="pending", is_active=True)
+        queryset = self.get_queryset().filter(status="pending")
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = FlightEnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Pending enquiries retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def by_status(self, request):
         status_param = request.query_params.get("status", "pending")
-        queryset = self.get_queryset().filter(status=status_param, is_active=True)
+        queryset = self.get_queryset().filter(status=status_param)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = FlightEnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response(
             f"{status_param.title()} enquiries retrieved successfully.", serializer.data
@@ -716,7 +755,7 @@ class EnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "service", "is_active"]
 
     def get_queryset(self):
-        return Enquiry.objects.filter(is_active=True).select_related("assigned_to").only(
+        return Enquiry.objects.all().select_related("assigned_to").only(
             "id", "auto_id", "name", "email", "phone", "service",
             "destination", "travel_date", "travelers", "status",
             "assigned_to", "date_added", "is_active",
@@ -763,20 +802,23 @@ class EnquiryViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Enquiry deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def pending(self, request):
-        queryset = self.get_queryset().filter(status="pending", is_active=True)
+        queryset = self.get_queryset().filter(status="pending")
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = EnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Pending enquiries retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def by_status(self, request):
         status_param = request.query_params.get("status", "pending")
-        queryset = self.get_queryset().filter(status=status_param, is_active=True)
+        queryset = self.get_queryset().filter(status=status_param)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = EnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response(
             f"{status_param.title()} enquiries retrieved successfully.", serializer.data
@@ -787,7 +829,9 @@ class EnquiryViewSet(BaseModelViewSet):
         service_param = request.query_params.get("service")
         if not service_param:
             return self.error_response("Service parameter is required.")
-        queryset = self.get_queryset().filter(service=service_param, is_active=True)
+        queryset = self.get_queryset().filter(service=service_param)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = EnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response(
             f"Enquiries for {service_param} retrieved successfully.", serializer.data
@@ -800,7 +844,7 @@ class DestinationViewSet(BaseModelViewSet):
     filterset_fields = ["is_international", "is_active"]
 
     def get_queryset(self):
-        return Destination.objects.filter(is_active=True).only(
+        return Destination.objects.all().only(
             "id", "auto_id", "name", "slug", "location", "description",
             "is_international", "is_active", "date_added",
         )
@@ -837,25 +881,30 @@ class DestinationViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Destination deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def international(self, request):
-        queryset = self.get_queryset().filter(is_international=True, is_active=True)
+        queryset = self.get_queryset().filter(is_international=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = DestinationListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("International destinations retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def domestic(self, request):
-        queryset = self.get_queryset().filter(is_international=False, is_active=True)
+        queryset = self.get_queryset().filter(is_international=False)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = DestinationListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Domestic destinations retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def trending(self, request):
-        queryset = self.get_queryset().filter(is_trending=True, is_active=True)
+        queryset = self.get_queryset().filter(is_trending=True)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = DestinationListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending destinations retrieved successfully.", serializer.data)
 
@@ -866,7 +915,7 @@ class DestinationEnquiryViewSet(BaseModelViewSet):
     filterset_fields = ["status", "destination", "flight_ticket_required", "is_active"]
 
     def get_queryset(self):
-        return DestinationEnquiry.objects.filter(is_active=True).select_related("destination", "assigned_to").only(
+        return DestinationEnquiry.objects.all().select_related("destination", "assigned_to").only(
             "id", "auto_id", "destination", "full_name", "email", "phone",
             "start_date", "end_date", "number_of_pax", "flight_ticket_required",
             "status", "assigned_to", "date_added", "is_active",
@@ -913,20 +962,23 @@ class DestinationEnquiryViewSet(BaseModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
-        instance.is_active = False
-        instance.save()
+        instance.delete()
         return self.success_response("Destination enquiry deleted successfully.")
 
     @action(detail=False, methods=["get"])
     def pending(self, request):
-        queryset = self.get_queryset().filter(status="pending", is_active=True)
+        queryset = self.get_queryset().filter(status="pending")
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = DestinationEnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Pending enquiries retrieved successfully.", serializer.data)
 
     @action(detail=False, methods=["get"])
     def by_status(self, request):
         status_param = request.query_params.get("status", "pending")
-        queryset = self.get_queryset().filter(status=status_param, is_active=True)
+        queryset = self.get_queryset().filter(status=status_param)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = DestinationEnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response(
             f"{status_param.title()} enquiries retrieved successfully.", serializer.data
@@ -937,7 +989,9 @@ class DestinationEnquiryViewSet(BaseModelViewSet):
         destination_id = request.query_params.get("destination_id")
         if not destination_id:
             return self.error_response("Destination ID parameter is required.")
-        queryset = self.get_queryset().filter(destination_id=destination_id, is_active=True)
+        queryset = self.get_queryset().filter(destination_id=destination_id)
+        if not request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
         serializer = DestinationEnquiryListSerializer(queryset, many=True, context={"request": request})
         return self.success_response(
             "Enquiries for destination retrieved successfully.", serializer.data
@@ -955,22 +1009,22 @@ def dashboard_stats_view(request):
     """
     try:
         # Hotels count
-        hotels_count = Hotel.objects.filter(is_active=True).count()
+        hotels_count = Hotel.objects.all().count()
         
         # Packages count
-        packages_count = Package.objects.filter(is_active=True).count()
+        packages_count = Package.objects.all().count()
         
         # Flight Enquiries count
-        flight_enquiries_count = FlightEnquiry.objects.filter(is_active=True).count()
+        flight_enquiries_count = FlightEnquiry.objects.all().count()
         
         # General Enquiries count
-        general_enquiries_count = Enquiry.objects.filter(is_active=True).count()
+        general_enquiries_count = Enquiry.objects.all().count()
         
         # Featured Hotels count
-        featured_hotels_count = Hotel.objects.filter(is_active=True, is_featured=True).count()
+        featured_hotels_count = Hotel.objects.filter(is_featured=True).count()
         
         # Trending Hotels count
-        trending_hotels_count = Hotel.objects.filter(is_active=True, is_trending=True).count()
+        trending_hotels_count = Hotel.objects.filter(is_trending=True).count()
         
         # Prepare response data
         data = {
@@ -1002,7 +1056,7 @@ def package_category_list(request):
 
 
 class OfferBannerViewSet(BaseModelViewSet):
-    queryset = OfferBanner.objects.filter(is_active=True)
+    queryset = OfferBanner.objects.all()
     serializer_class = OfferBannerSerializer
     search_fields = ["name"]
     ordering_fields = ["date_added", "name"]
