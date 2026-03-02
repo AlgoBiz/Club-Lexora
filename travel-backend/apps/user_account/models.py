@@ -472,7 +472,7 @@ class Enquiry(BaseModel):
     cabin_type = models.CharField(max_length=100, null=True, blank=True)
 
     # Additional fields
-    general = models.BooleanField(default=True)
+    general = models.BooleanField(default=False)
     tell_about_trip = models.TextField(null=True, blank=True)
 
     class Meta:

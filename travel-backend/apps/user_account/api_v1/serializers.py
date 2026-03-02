@@ -792,6 +792,7 @@ class EnquiryListSerializer(serializers.ModelSerializer):
             "id", "auto_id", "name", "email", "phone", "service",
             "destination", "travel_date", "travelers", "status",
             "assigned_to_name", "date_added", "is_active", "general", "tell_about_trip",
+            "message", "follow_up_notes",
             # Hotel fields
             "check_in_date", "check_out_date", "rooms", "guests",
             # Island Stay fields

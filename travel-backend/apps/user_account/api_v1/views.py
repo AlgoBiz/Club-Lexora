@@ -5,8 +5,13 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model, logout, authenticate
+from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+from datetime import date
 
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
@@ -838,18 +843,31 @@ class FlightEnquiryViewSet(BaseModelViewSet):
 class EnquiryViewSet(BaseModelViewSet):
     search_fields = ["name", "email", "phone", "service", "destination"]
     ordering_fields = ["travel_date", "date_added"]
-    filterset_fields = ["status", "service", "is_active"]
+    filterset_fields = ["status", "service", "is_active", "general"]
 
     def get_queryset(self):
-        queryset = Enquiry.objects.all().select_related("assigned_to").only(
-            "id", "auto_id", "name", "email", "phone", "service",
-            "destination", "travel_date", "travelers", "status",
-            "assigned_to", "date_added", "is_active",
-        )
+        queryset = Enquiry.objects.all().select_related("assigned_to")
         
         # Filter by active status for unauthenticated users
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
+        
+        # Filter by general parameter
+        general = self.request.query_params.get("general")
+        if general is not None:
+            if general.lower() in ["true", "1"]:
+                queryset = queryset.filter(general=True)
+            elif general.lower() in ["false", "0"]:
+                queryset = queryset.filter(general=False)
+        
+        # Filter by date range
+        from_date = self.request.query_params.get("from_date")
+        to_date = self.request.query_params.get("to_date")
+        
+        if from_date:
+            queryset = queryset.filter(travel_date__gte=from_date)
+        if to_date:
+            queryset = queryset.filter(travel_date__lte=to_date)
         
         return queryset
 
@@ -928,6 +946,163 @@ class EnquiryViewSet(BaseModelViewSet):
         return self.success_response(
             f"Enquiries for {service_param} retrieved successfully.", serializer.data
         )
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def download_excel(self, request):
+        """
+        Download enquiries as Excel file.
+        Defaults to today's data if no date range specified.
+        Only includes fields with non-null values.
+        
+        Query params:
+        - from_date: Start date (YYYY-MM-DD)
+        - to_date: End date (YYYY-MM-DD)
+        - service: Filter by service
+        - status: Filter by status
+        - general: Filter by general (true/false)
+        """
+        # Get queryset with filters
+        queryset = self.get_queryset()
+        
+        # Default to today's data if no date range specified
+        from_date = request.query_params.get("from_date")
+        to_date = request.query_params.get("to_date")
+        
+        if not from_date and not to_date:
+            today = date.today()
+            queryset = queryset.filter(date_added__date=today)
+            filename_date = today.strftime("%Y-%m-%d")
+        else:
+            if from_date:
+                queryset = queryset.filter(travel_date__gte=from_date)
+            if to_date:
+                queryset = queryset.filter(travel_date__lte=to_date)
+            filename_date = f"{from_date or 'start'}_to_{to_date or 'end'}"
+        
+        # Apply additional filters
+        service = request.query_params.get("service")
+        if service:
+            queryset = queryset.filter(service=service)
+        
+        status_param = request.query_params.get("status")
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        
+        general = request.query_params.get("general")
+        if general is not None:
+            if general.lower() in ["true", "1"]:
+                queryset = queryset.filter(general=True)
+            elif general.lower() in ["false", "0"]:
+                queryset = queryset.filter(general=False)
+        
+        # Create workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Enquiries"
+        
+        # Define all possible fields with readable headers
+        field_mapping = {
+            "auto_id": "ID",
+            "name": "Name",
+            "email": "Email",
+            "phone": "Phone",
+            "service": "Service",
+            "destination": "Destination",
+            "travel_date": "Travel Date",
+            "travelers": "Travelers",
+            "message": "Message",
+            "status": "Status",
+            "general": "General Enquiry",
+            "tell_about_trip": "Trip Details",
+            "follow_up_notes": "Follow-up Notes",
+            "assigned_to__full_name": "Assigned To",
+            # Hotel fields
+            "check_in_date": "Check-in Date",
+            "check_out_date": "Check-out Date",
+            "rooms": "Rooms",
+            "guests": "Guests",
+            # Island Stay fields
+            "island_duration": "Island Duration",
+            # Houseboat fields
+            "houseboat_duration": "Houseboat Duration",
+            "bedrooms": "Bedrooms",
+            "boarding_date": "Boarding Date",
+            # Cruise fields
+            "preferred_departure_date": "Preferred Departure",
+            "cruise_duration": "Cruise Duration",
+            "passengers": "Passengers",
+            "cabin_type": "Cabin Type",
+            "date_added": "Date Added",
+            "is_active": "Active",
+        }
+        
+        # Get data
+        enquiries = list(queryset.values(
+            "auto_id", "name", "email", "phone", "service", "destination",
+            "travel_date", "travelers", "message", "status", "general",
+            "tell_about_trip", "follow_up_notes", "assigned_to__full_name",
+            "check_in_date", "check_out_date", "rooms", "guests",
+            "island_duration", "houseboat_duration", "bedrooms", "boarding_date",
+            "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
+            "date_added", "is_active"
+        ))
+        
+        if not enquiries:
+            return self.error_response("No data found for the specified filters.")
+        
+        # Determine which fields have data (at least one non-null value)
+        fields_with_data = []
+        for field in field_mapping.keys():
+            if any(row.get(field) not in [None, "", []] for row in enquiries):
+                fields_with_data.append(field)
+        
+        # Write headers
+        headers = [field_mapping[field] for field in fields_with_data]
+        ws.append(headers)
+        
+        # Style headers
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Write data rows
+        for enquiry in enquiries:
+            row = []
+            for field in fields_with_data:
+                value = enquiry.get(field)
+                
+                # Format values
+                if value is None:
+                    value = ""
+                elif isinstance(value, bool):
+                    value = "Yes" if value else "No"
+                elif isinstance(value, (date, timezone.datetime)):
+                    value = value.strftime("%Y-%m-%d")
+                
+                row.append(value)
+            ws.append(row)
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Create response
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="enquiries_{filename_date}.xlsx"'
+        
+        wb.save(response)
+        return response
 
 
 class DestinationViewSet(BaseModelViewSet):
