@@ -96,6 +96,16 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="Designates whether the user can log into this admin site.",
     )
     date_joined = models.DateTimeField(_("date joined"), default=timezone.now)
+    
+    # Role-based permissions
+    can_manage_enquiries = models.BooleanField(
+        default=False,
+        help_text="User can create, update, and delete enquiries (Flight, General, Destination enquiries)."
+    )
+    can_manage_administration = models.BooleanField(
+        default=False,
+        help_text="User can manage all resources (Hotels, Packages, Houseboats, Cruises, Island Stays, Destinations, Offer Banners)."
+    )
 
     objects = UserManager()
 
@@ -165,6 +175,7 @@ class Hotel(BaseModel):
     has_parking = models.BooleanField(default=False)
     has_ski_access = models.BooleanField(default=False)
     amenities = models.TextField(help_text="Comma-separated amenities", blank=True)
+    youtube_link = models.URLField(max_length=500, blank=True, null=True, help_text="YouTube video link")
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
@@ -459,6 +470,10 @@ class Enquiry(BaseModel):
     cruise_duration = models.CharField(max_length=100, null=True, blank=True)
     passengers = models.CharField(max_length=50, null=True, blank=True)
     cabin_type = models.CharField(max_length=100, null=True, blank=True)
+
+    # Additional fields
+    general = models.BooleanField(default=True)
+    tell_about_trip = models.TextField(null=True, blank=True)
 
     class Meta:
         ordering = ["-date_added"]

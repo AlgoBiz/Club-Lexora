@@ -11,7 +11,10 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "username", "email", "full_name", "phone", "is_active", "date_joined"]
+        fields = [
+            "id", "username", "email", "full_name", "phone", "is_active", 
+            "can_manage_enquiries", "can_manage_administration", "date_joined"
+        ]
         read_only_fields = ["id", "date_joined"]
 
 
@@ -20,9 +23,47 @@ class UserDetailSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id", "username", "email", "full_name", "country_code", "phone",
-            "phone_verified", "email_verified", "is_active", "date_joined",
+            "phone_verified", "email_verified", "is_active", "can_manage_enquiries",
+            "can_manage_administration", "is_admin", "is_superuser", "date_joined",
         ]
         read_only_fields = ["id", "date_joined", "phone_verified", "email_verified"]
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+    
+    class Meta:
+        model = User
+        fields = [
+            "username", "email", "full_name", "phone", "country_code",
+            "password", "confirm_password", "can_manage_enquiries", 
+            "can_manage_administration"
+        ]
+    
+    def validate(self, data):
+        if data["password"] != data["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return data
+    
+    def validate_email(self, value):
+        if value and User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+    
+    def create(self, validated_data):
+        validated_data.pop("confirm_password")
+        password = validated_data.pop("password")
+        user = User.objects.create(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class UserUpdatePermissionsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["can_manage_enquiries", "can_manage_administration", "is_active"]
 
 
 class ChangePasswordSerializer(serializers.Serializer):
@@ -66,7 +107,7 @@ class HotelListSerializer(serializers.ModelSerializer):
         model = Hotel
         fields = [
             "id", "auto_id", "name", "slug", "location", "rating",
-            "price_per_night", "image_url", "amenities_list",
+            "price_per_night", "image_url", "amenities_list", "youtube_link",
             "is_featured", "is_trending", "is_premium", "is_active",
         ]
 
@@ -750,7 +791,7 @@ class EnquiryListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "auto_id", "name", "email", "phone", "service",
             "destination", "travel_date", "travelers", "status",
-            "assigned_to_name", "date_added", "is_active",
+            "assigned_to_name", "date_added", "is_active", "general", "tell_about_trip",
             # Hotel fields
             "check_in_date", "check_out_date", "rooms", "guests",
             # Island Stay fields
@@ -775,7 +816,7 @@ class EnquiryCreateSerializer(serializers.ModelSerializer):
         model = Enquiry
         fields = [
             "name", "email", "phone", "service", "destination", "travel_date", 
-            "travelers", "message",
+            "travelers", "message", "general", "tell_about_trip",
             # Hotel fields
             "check_in_date", "check_out_date", "rooms", "guests",
             # Island Stay fields
@@ -801,7 +842,7 @@ class EnquiryUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enquiry
         fields = [
-            "status", "follow_up_notes", "assigned_to",
+            "status", "follow_up_notes", "assigned_to", "general", "tell_about_trip",
             # All enquiry fields for update
             "name", "email", "phone", "service", "destination", "travel_date", 
             "travelers", "message",

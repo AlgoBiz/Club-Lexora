@@ -14,6 +14,7 @@ from apps.user_account.models import (
 )
 from apps.user_account.api_v1.serializers import (
     UserSerializer, UserDetailSerializer, ChangePasswordSerializer,
+    UserRegistrationSerializer, UserUpdatePermissionsSerializer,
     HotelListSerializer, HotelDetailSerializer, HotelCreateUpdateSerializer,
     PackageListSerializer, PackageDetailSerializer, PackageCreateUpdateSerializer,
     HouseboatListSerializer, HouseboatDetailSerializer, HouseboatCreateUpdateSerializer,
@@ -27,6 +28,9 @@ from apps.user_account.api_v1.serializers import (
     DestinationEnquiryListSerializer, DestinationEnquiryDetailSerializer,
     DestinationEnquiryCreateSerializer, DestinationEnquiryUpdateSerializer,
     OfferBannerSerializer,
+)
+from apps.user_account.api_v1.permissions import (
+    CanManageEnquiries, CanManageAdministration, IsAdminOrHasBothPermissions
 )
 
 User = get_user_model()
@@ -142,6 +146,25 @@ def logout_view(request):
     return success_response("Logged out successfully.")
 
 
+@api_view(["POST"])
+@permission_classes([IsAdminUser])
+def register_user_view(request):
+    """
+    Register a new user with role-based permissions.
+    Only admins can create new users.
+    """
+    serializer = UserRegistrationSerializer(data=request.data)
+    if not serializer.is_valid():
+        return error_response("Validation failed.", serializer.errors)
+    
+    user = serializer.save()
+    return success_response(
+        "User registered successfully.",
+        UserDetailSerializer(user).data,
+        status.HTTP_201_CREATED,
+    )
+
+
 
 class BaseModelViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -149,7 +172,7 @@ class BaseModelViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ["create", "update", "partial_update", "destroy"]:
-            return [IsAdminUser()]
+            return [CanManageAdministration()]
         return [AllowAny()]
     
     def get_queryset(self):
@@ -216,9 +239,16 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ["username", "email", "full_name"]
     ordering = ["-date_joined"]
 
+    def get_permissions(self):
+        if self.action in ["create", "update", "partial_update", "destroy", "update_permissions"]:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
+
     def get_serializer_class(self):
         if self.action == "retrieve":
             return UserDetailSerializer
+        if self.action == "update_permissions":
+            return UserUpdatePermissionsSerializer
         return UserSerializer
 
     @action(detail=False, methods=["get"])
@@ -244,6 +274,23 @@ class UserViewSet(viewsets.ModelViewSet):
     def logout(self, request):
         logout(request)
         return success_response("Logged out successfully.")
+
+    @action(detail=True, methods=["patch"], permission_classes=[IsAdminUser])
+    def update_permissions(self, request, pk=None):
+        """
+        Update user permissions (can_manage_enquiries, can_manage_administration).
+        Only admins can update permissions.
+        """
+        user = self.get_object()
+        serializer = UserUpdatePermissionsSerializer(user, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return error_response("Validation failed.", serializer.errors)
+        
+        serializer.save()
+        return success_response(
+            "User permissions updated successfully.",
+            UserDetailSerializer(user).data,
+        )
 
 
 class HotelViewSet(BaseModelViewSet):
@@ -737,7 +784,7 @@ class FlightEnquiryViewSet(BaseModelViewSet):
         if self.action == "create":
             return [AllowAny()]
         if self.action in ["update", "partial_update", "destroy"]:
-            return [IsAdminUser()]
+            return [CanManageEnquiries()]
         return [IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
@@ -819,7 +866,7 @@ class EnquiryViewSet(BaseModelViewSet):
         if self.action == "create":
             return [AllowAny()]
         if self.action in ["update", "partial_update", "destroy"]:
-            return [IsAdminUser()]
+            return [CanManageEnquiries()]
         return [IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
@@ -991,7 +1038,7 @@ class DestinationEnquiryViewSet(BaseModelViewSet):
         if self.action == "create":
             return [AllowAny()]
         if self.action in ["update", "partial_update", "destroy"]:
-            return [IsAdminUser()]
+            return [CanManageEnquiries()]
         return [IsAuthenticated()]
 
     def create(self, request, *args, **kwargs):
