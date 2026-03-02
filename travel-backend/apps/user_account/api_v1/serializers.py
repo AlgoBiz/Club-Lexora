@@ -231,7 +231,7 @@ class PackageListSerializer(serializers.ModelSerializer):
             "id", "auto_id", "title", "slug", "destination", "destination_name",
             "location", "duration", "group_size", "price", "original_price",
             "discount_percentage", "image_url", "rating", "reviews_count",
-            "category", "type", "is_featured", "is_trending", "is_premium",
+            "category", "type", "youtube_link", "is_featured", "is_trending", "is_premium",
             "is_international", "is_kerala", 
             "no_of_days", "no_of_nights", "pickup_location", "drop_location",
             "transportation_mode", "stay_type", "guide", "meals_included",
@@ -390,7 +390,7 @@ class HouseboatListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "auto_id", "name", "slug", "type", "capacity", "bedrooms",
             "route", "duration", "price", "image_url", "features_list",
-            "is_featured", "is_trending", "is_premium", "is_active",
+            "youtube_link", "is_featured", "is_trending", "is_premium", "is_active",
         ]
 
     def get_image_url(self, obj):
@@ -511,7 +511,7 @@ class CruiseListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "auto_id", "name", "slug", "cruise_line", "route",
             "duration", "departures", "price", "image_url", "highlights_list",
-            "is_featured", "is_trending", "is_premium", "is_active", "is_international",
+            "youtube_link", "is_featured", "is_trending", "is_premium", "is_active", "is_international",
         ]
 
     def get_image_url(self, obj):
@@ -627,7 +627,7 @@ class IslandStayListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "auto_id", "name", "slug", "location", "rating",
             "price", "duration", "image_url", "features_list",
-            "is_featured", "is_trending", "is_premium", "is_active", "is_international",
+            "youtube_link", "is_featured", "is_trending", "is_premium", "is_active", "is_international",
         ]
 
     def get_image_url(self, obj):

@@ -250,6 +250,7 @@ class Package(BaseModel):
     inclusions = models.TextField(help_text="Comma-separated inclusions", blank=True)
     exclusions = models.TextField(help_text="Comma-separated exclusions", blank=True)
     highlights = models.TextField(help_text="Comma-separated highlights", blank=True)
+    youtube_link = models.URLField(max_length=500, blank=True, null=True, help_text="YouTube video link")
     
     # Additional package details
     no_of_days = models.IntegerField(null=True, blank=True, help_text="Number of days")
@@ -294,6 +295,7 @@ class Houseboat(BaseModel):
     gallery_image_5 = models.ImageField(upload_to="houseboats/gallery/", null=True, blank=True)
     features = models.TextField(help_text="Comma-separated features", blank=True)
     description = models.TextField(blank=True)
+    youtube_link = models.URLField(max_length=500, blank=True, null=True, help_text="YouTube video link")
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
@@ -323,6 +325,7 @@ class Cruise(BaseModel):
     gallery_image_5 = models.ImageField(upload_to="cruises/gallery/", null=True, blank=True)
     highlights = models.TextField(help_text="Comma-separated highlights", blank=True)
     description = models.TextField(blank=True)
+    youtube_link = models.URLField(max_length=500, blank=True, null=True, help_text="YouTube video link")
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
@@ -354,6 +357,7 @@ class IslandStay(BaseModel):
     gallery_image_5 = models.ImageField(upload_to="island_stays/gallery/", null=True, blank=True)
     features = models.TextField(help_text="Comma-separated features", blank=True)
     description = models.TextField(blank=True)
+    youtube_link = models.URLField(max_length=500, blank=True, null=True, help_text="YouTube video link")
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
