@@ -654,18 +654,26 @@ class HouseboatViewSet(BaseModelViewSet):
 class CruiseViewSet(BaseModelViewSet):
     search_fields = ["name", "cruise_line", "route", "description"]
     ordering_fields = ["price", "date_added"]
-    filterset_fields = ["is_featured", "is_trending", "is_premium", "is_active"]
+    filterset_fields = ["is_featured", "is_trending", "is_premium", "is_active", "is_international"]
 
     def get_queryset(self):
         queryset = Cruise.objects.all().only(
             "id", "auto_id", "name", "slug", "cruise_line", "route",
             "duration", "departures", "price", "image", "highlights",
-            "is_featured", "is_trending", "is_premium", "is_active", "date_added",
+            "is_featured", "is_trending", "is_premium", "is_active", "is_international", "date_added",
         )
         
         # Filter by active status for unauthenticated users
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
+        
+        # Filter by is_international query parameter
+        is_international = self.request.query_params.get('is_international')
+        if is_international is not None:
+            if is_international.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(is_international=True)
+            elif is_international.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(is_international=False)
         
         return queryset
 
@@ -724,18 +732,26 @@ class CruiseViewSet(BaseModelViewSet):
 class IslandStayViewSet(BaseModelViewSet):
     search_fields = ["name", "location", "description"]
     ordering_fields = ["price", "rating", "date_added"]
-    filterset_fields = ["rating", "is_featured", "is_trending", "is_premium", "is_active"]
+    filterset_fields = ["rating", "is_featured", "is_trending", "is_premium", "is_active", "is_international"]
 
     def get_queryset(self):
         queryset = IslandStay.objects.all().only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price", "duration", "image", "features", "is_featured",
-            "is_trending", "is_premium", "is_active", "date_added",
+            "is_trending", "is_premium", "is_active", "is_international", "date_added",
         )
         
         # Filter by active status for unauthenticated users
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
+        
+        # Filter by is_international query parameter
+        is_international = self.request.query_params.get('is_international')
+        if is_international is not None:
+            if is_international.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(is_international=True)
+            elif is_international.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(is_international=False)
         
         return queryset
 

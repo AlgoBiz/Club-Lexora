@@ -250,6 +250,16 @@ class Package(BaseModel):
     inclusions = models.TextField(help_text="Comma-separated inclusions", blank=True)
     exclusions = models.TextField(help_text="Comma-separated exclusions", blank=True)
     highlights = models.TextField(help_text="Comma-separated highlights", blank=True)
+    
+    # Additional package details
+    no_of_days = models.IntegerField(null=True, blank=True, help_text="Number of days")
+    no_of_nights = models.IntegerField(null=True, blank=True, help_text="Number of nights")
+    pickup_location = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., Airport / Hotel")
+    drop_location = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., Airport / Hotel")
+    transportation_mode = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., AC Vehicle")
+    stay_type = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., 4-Star Resort")
+    guide = models.CharField(max_length=100, null=True, blank=True, help_text="e.g., Included")
+    meals_included = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., Breakfast & Dinner")
 
     class Meta:
         ordering = ["-date_added"]
@@ -316,6 +326,7 @@ class Cruise(BaseModel):
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
+    is_international = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-date_added"]
@@ -346,6 +357,7 @@ class IslandStay(BaseModel):
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
+    is_international = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-date_added"]
