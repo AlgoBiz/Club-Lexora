@@ -315,6 +315,17 @@ class HotelViewSet(BaseModelViewSet):
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
         
+        # Location filtering
+        location = self.request.query_params.get('location')
+        if location:
+            queryset = queryset.filter(location__icontains=location)
+        
+        # Featured filtering
+        is_featured = self.request.query_params.get('is_featured')
+        if is_featured is not None:
+            is_featured_bool = is_featured.lower() in ['true', '1', 'yes']
+            queryset = queryset.filter(is_featured=is_featured_bool)
+        
         # Price filtering
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
@@ -328,6 +339,14 @@ class HotelViewSet(BaseModelViewSet):
         if max_price:
             try:
                 queryset = queryset.filter(price_per_night__lte=float(max_price))
+            except (ValueError, TypeError):
+                pass
+        
+        # Rating filtering
+        min_rating = self.request.query_params.get('min_rating')
+        if min_rating:
+            try:
+                queryset = queryset.filter(rating__gte=float(min_rating))
             except (ValueError, TypeError):
                 pass
         
@@ -383,6 +402,21 @@ class HotelViewSet(BaseModelViewSet):
             queryset = queryset.filter(is_active=True)
         serializer = HotelListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending hotels retrieved successfully.", serializer.data)
+
+    @action(detail=False, methods=["get"], permission_classes=[AllowAny])
+    def locations(self, request):
+        """Get unique hotel locations"""
+        locations = Hotel.objects.filter(
+            is_active=True
+        ).values_list('location', flat=True).distinct().order_by('location')
+        
+        # Filter out empty locations
+        unique_locations = [loc for loc in locations if loc]
+        
+        return self.success_response(
+            "Hotel locations retrieved successfully.",
+            {"locations": unique_locations}
+        )
 
 
 class PackageViewSet(BaseModelViewSet):
