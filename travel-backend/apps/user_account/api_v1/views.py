@@ -168,23 +168,31 @@ class BaseModelViewSet(viewsets.ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
         
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            paginated_response = self.get_paginated_response(serializer.data)
+        # Check if there are any query parameters (excluding 'page')
+        query_params = {k: v for k, v in request.query_params.items() if k != 'page'}
+        has_query_params = bool(query_params)
+        
+        # Apply pagination only if there are query parameters
+        if has_query_params:
+            page = self.paginate_queryset(queryset)
             
-            # Transform to custom format with results array
-            return Response({
-                "message": "Data retrieved successfully.",
-                "data": {
-                    "results": paginated_response.data.get("results", []),
-                    "count": paginated_response.data.get("count", 0),
-                    "next": paginated_response.data.get("next"),
-                    "previous": paginated_response.data.get("previous"),
-                }
-            })
+            if page is not None:
+                serializer = self.get_serializer(page, many=True)
+                paginated_response = self.get_paginated_response(serializer.data)
+                
+                # Transform to custom format with results array
+                return Response({
+                    "message": "Data retrieved successfully.",
+                    "data": {
+                        "results": paginated_response.data.get("results", []),
+                        "count": paginated_response.data.get("count", 0),
+                        "next": paginated_response.data.get("next"),
+                        "previous": paginated_response.data.get("previous"),
+                    }
+                })
         
+        # No pagination when there are no query parameters
         serializer = self.get_serializer(queryset, many=True)
         return Response({
             "message": "Data retrieved successfully.",
