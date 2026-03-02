@@ -169,9 +169,8 @@ class BaseModelViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
         
-        # Check if there are any query parameters (excluding 'page')
-        query_params = {k: v for k, v in request.query_params.items() if k != 'page'}
-        has_query_params = bool(query_params)
+        # Check if there are any query parameters (including 'page')
+        has_query_params = bool(request.query_params)
         
         # Apply pagination only if there are query parameters
         if has_query_params:
