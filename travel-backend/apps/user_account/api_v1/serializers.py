@@ -101,6 +101,16 @@ class HotelCreateUpdateSerializer(serializers.ModelSerializer):
         model = Hotel
         exclude = ["auto_id", "date_added", "date_updated"]
 
+    def validate_name(self, value):
+        # Check for duplicate name (case-insensitive)
+        queryset = Hotel.objects.filter(name__iexact=value)
+        # Exclude current instance during update
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A hotel with this name already exists.")
+        return value
+
     def validate_price_per_night(self, value):
         if value <= 0:
             raise serializers.ValidationError("Price must be greater than 0.")
@@ -180,6 +190,16 @@ class PackageCreateUpdateSerializer(serializers.ModelSerializer):
         model = Package
         exclude = ["auto_id", "date_added", "date_updated"]
 
+    def validate_title(self, value):
+        # Check for duplicate title (case-insensitive)
+        queryset = Package.objects.filter(title__iexact=value)
+        # Exclude current instance during update
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A package with this title already exists.")
+        return value
+
     def validate_price(self, value):
         if value <= 0:
             raise serializers.ValidationError("Price must be greater than 0.")
@@ -193,6 +213,72 @@ class PackageCreateUpdateSerializer(serializers.ModelSerializer):
                 {"original_price": "Original price cannot be less than current price."}
             )
         return data
+
+    def update(self, instance, validated_data):
+        """
+        Custom update method to handle existing_gallery_image_X fields.
+        The frontend sends existing images as existing_gallery_image_1, existing_gallery_image_2, etc.
+        We need to:
+        1. Clear all gallery images
+        2. Reassign only the existing images that were sent
+        3. Handle new gallery image uploads
+        """
+        request = self.context.get('request')
+        
+        if request:
+            # Collect existing gallery images from request data
+            existing_images = {}
+            for i in range(1, 6):
+                field_name = f'existing_gallery_image_{i}'
+                if field_name in request.data:
+                    # Extract the image number from the URL (e.g., gallery_image_3)
+                    existing_url = request.data[field_name]
+                    # Parse which gallery_image field this corresponds to
+                    for j in range(1, 6):
+                        gallery_field = f'gallery_image_{j}'
+                        current_image = getattr(instance, gallery_field)
+                        if current_image and current_image.url in existing_url:
+                            existing_images[i] = current_image
+                            break
+            
+            # Clear all gallery images first
+            for i in range(1, 6):
+                field_name = f'gallery_image_{i}'
+                # Delete old image file if it's not in existing_images
+                old_image = getattr(instance, field_name)
+                if old_image and i not in existing_images:
+                    # Check if this image is being kept
+                    is_kept = False
+                    for kept_image in existing_images.values():
+                        if old_image.name == kept_image.name:
+                            is_kept = True
+                            break
+                    if not is_kept:
+                        old_image.delete(save=False)
+                
+                setattr(instance, field_name, None)
+            
+            # Reassign existing images to sequential positions
+            for idx, (position, image) in enumerate(sorted(existing_images.items()), start=1):
+                field_name = f'gallery_image_{idx}'
+                setattr(instance, field_name, image)
+            
+            # Handle new gallery image uploads
+            next_position = len(existing_images) + 1
+            for i in range(1, 6):
+                field_name = f'gallery_image_{i}'
+                if field_name in validated_data:
+                    new_image = validated_data.pop(field_name)
+                    if new_image and next_position <= 5:
+                        setattr(instance, f'gallery_image_{next_position}', new_image)
+                        next_position += 1
+        
+        # Update all other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        return instance
 
 
 class HouseboatListSerializer(serializers.ModelSerializer):
@@ -237,6 +323,16 @@ class HouseboatCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Houseboat
         exclude = ["auto_id", "date_added", "date_updated"]
+
+    def validate_name(self, value):
+        # Check for duplicate name (case-insensitive)
+        queryset = Houseboat.objects.filter(name__iexact=value)
+        # Exclude current instance during update
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A houseboat with this name already exists.")
+        return value
 
     def validate_price(self, value):
         if value <= 0:
@@ -292,6 +388,16 @@ class CruiseCreateUpdateSerializer(serializers.ModelSerializer):
         model = Cruise
         exclude = ["auto_id", "date_added", "date_updated"]
 
+    def validate_name(self, value):
+        # Check for duplicate name (case-insensitive)
+        queryset = Cruise.objects.filter(name__iexact=value)
+        # Exclude current instance during update
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A cruise with this name already exists.")
+        return value
+
     def validate_price(self, value):
         if value <= 0:
             raise serializers.ValidationError("Price must be greater than 0.")
@@ -340,6 +446,16 @@ class IslandStayCreateUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = IslandStay
         exclude = ["auto_id", "date_added", "date_updated"]
+
+    def validate_name(self, value):
+        # Check for duplicate name (case-insensitive)
+        queryset = IslandStay.objects.filter(name__iexact=value)
+        # Exclude current instance during update
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("An island stay with this name already exists.")
+        return value
 
     def validate_price(self, value):
         if value <= 0:
@@ -492,6 +608,16 @@ class DestinationCreateUpdateSerializer(serializers.ModelSerializer):
         model = Destination
         exclude = ["auto_id", "date_added", "date_updated"]
 
+    def validate_name(self, value):
+        # Check for duplicate name (case-insensitive)
+        queryset = Destination.objects.filter(name__iexact=value)
+        # Exclude current instance during update
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A destination with this name already exists.")
+        return value
+
 
 class DestinationEnquiryListSerializer(serializers.ModelSerializer):
     destination_name = serializers.CharField(source="destination.name", read_only=True)
@@ -551,6 +677,16 @@ class OfferBannerSerializer(serializers.ModelSerializer):
         model = OfferBanner
         fields = ["id", "auto_id", "name", "image", "image_url", "date_added"]
         read_only_fields = ["id", "auto_id", "date_added"]
+
+    def validate_name(self, value):
+        # Check for duplicate name (case-insensitive)
+        queryset = OfferBanner.objects.filter(name__iexact=value)
+        # Exclude current instance during update
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("An offer banner with this name already exists.")
+        return value
 
     def get_image_url(self, obj):
         return _build_absolute_uri(self.context.get("request"), obj.image)
