@@ -433,6 +433,7 @@ class Enquiry(BaseModel):
     ]
 
     # Basic fields
+    model_uuid = models.UUIDField(editable=False, null=True, blank=True)
     name = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(null=True, blank=True)
     phone = models.CharField(max_length=30, null=True, blank=True)

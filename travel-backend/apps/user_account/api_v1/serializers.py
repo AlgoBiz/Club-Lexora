@@ -816,7 +816,7 @@ class EnquiryCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enquiry
         fields = [
-            "name", "email", "phone", "service", "destination", "travel_date", 
+            "model_uuid", "name", "email", "phone", "service", "destination", "travel_date", 
             "travelers", "message", "general", "tell_about_trip",
             # Hotel fields
             "check_in_date", "check_out_date", "rooms", "guests",
@@ -828,6 +828,7 @@ class EnquiryCreateSerializer(serializers.ModelSerializer):
             "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
         ]
         extra_kwargs = {
+            "model_uuid": {"required": False},
             "name": {"required": False},
             "email": {"required": False},
             "phone": {"required": False},
