@@ -5,7 +5,7 @@ from apps.user_account.api_v1.views import (
     CruiseViewSet, IslandStayViewSet, FlightEnquiryViewSet, EnquiryViewSet,
     DestinationViewSet, DestinationEnquiryViewSet, OfferBannerViewSet,
     login_view, refresh_token_view, verify_token_view, logout_view,
-    register_user_view, dashboard_stats_view, package_category_list
+    register_user_view, dashboard_stats_view, dashboard_analytics_view, package_category_list
 )
 
 
@@ -42,6 +42,7 @@ urlpatterns = [
     
     # Dashboard endpoint
     path('dashboard/stats/', dashboard_stats_view, name='dashboard_stats'),
+    path('dashboard/analytics/', dashboard_analytics_view, name='dashboard_analytics'),
     
     # Package categories endpoint
     path('package-categories/', package_category_list, name='package_categories'),

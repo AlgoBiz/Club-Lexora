@@ -12,6 +12,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from datetime import date
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
 
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
@@ -1370,6 +1372,98 @@ def dashboard_stats_view(request):
     except Exception as e:
         return error_response(
             "Failed to retrieve dashboard statistics.",
+            {"error": str(e)},
+            status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def dashboard_analytics_view(request):
+    """
+    Dashboard Analytics API endpoint that provides:
+    - Monthly enquiry counts for all months
+    - Top services by enquiry count (in decreasing order)
+    - 5 latest recent enquiries
+    """
+    try:
+        # 1. Monthly Analytics - Get enquiry counts by month
+        monthly_data = (
+            Enquiry.objects
+            .annotate(month=TruncMonth('date_added'))
+            .values('month')
+            .annotate(count=Count('id'))
+            .order_by('month')
+        )
+
+        # Format monthly data
+        monthly_analytics = []
+        for item in monthly_data:
+            if item['month']:
+                monthly_analytics.append({
+                    'month': item['month'].strftime('%B %Y'),
+                    'year': item['month'].year,
+                    'month_number': item['month'].month,
+                    'count': item['count']
+                })
+
+        # 2. Top Services by Enquiry Count (in decreasing order)
+        service_counts = (
+            Enquiry.objects
+            .values('service')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        # Format service data with readable names
+        service_analytics = []
+        service_dict = dict(Enquiry.SERVICE_CHOICES)
+        for item in service_counts:
+            if item['service']:
+                service_analytics.append({
+                    'service': item['service'],
+                    'service_name': service_dict.get(item['service'], item['service']),
+                    'count': item['count']
+                })
+
+        # 3. Latest 5 Recent Enquiries
+        recent_enquiries = (
+            Enquiry.objects
+            .select_related('assigned_to')
+            .order_by('-date_added')[:5]
+        )
+
+        recent_enquiries_data = []
+        for enquiry in recent_enquiries:
+            recent_enquiries_data.append({
+                'id': enquiry.id,
+                'auto_id': enquiry.auto_id,
+                'name': enquiry.name,
+                'email': enquiry.email,
+                'phone': enquiry.phone,
+                'service': enquiry.service,
+                'service_name': service_dict.get(enquiry.service, enquiry.service) if enquiry.service else None,
+                'destination': enquiry.destination,
+                'travel_date': enquiry.travel_date.strftime('%Y-%m-%d') if enquiry.travel_date else None,
+                'status': enquiry.status,
+                'date_added': enquiry.date_added.strftime('%Y-%m-%d %H:%M:%S'),
+                'assigned_to': enquiry.assigned_to.full_name if enquiry.assigned_to else None,
+            })
+
+        # 4. Total Enquiry Count
+        total_enquiries = Enquiry.objects.count()
+
+        # Prepare response data
+        data = {
+            'total_enquiries': total_enquiries,
+            'monthly_analytics': monthly_analytics,
+            'top_services': service_analytics,
+            'recent_enquiries': recent_enquiries_data,
+        }
+
+        return success_response("Dashboard analytics retrieved successfully.", data)
+
+    except Exception as e:
+        return error_response(
+            "Failed to retrieve dashboard analytics.",
             {"error": str(e)},
             status.HTTP_500_INTERNAL_SERVER_ERROR
         )
