@@ -113,18 +113,31 @@ def refresh_token_view(request):
         )
 
     try:
+        # Validate the refresh token
         refresh = RefreshToken(refresh_token)
+        
+        # Generate new tokens (token rotation for security)
+        user_id = refresh.payload.get('user_id')
+        user = User.objects.get(id=user_id)
+        new_refresh = RefreshToken.for_user(user)
+        
         return success_response(
             "Token refreshed successfully.",
             {
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
+                "access": str(new_refresh.access_token),
+                "refresh": str(new_refresh),
             },
         )
     except TokenError as e:
         return error_response(
             "Invalid or expired refresh token.",
             {"refresh": [str(e)]},
+            status.HTTP_401_UNAUTHORIZED,
+        )
+    except User.DoesNotExist:
+        return error_response(
+            "User not found.",
+            {"refresh": ["User associated with this token does not exist."]},
             status.HTTP_401_UNAUTHORIZED,
         )
 
