@@ -439,7 +439,7 @@ class PackageViewSet(BaseModelViewSet):
     ordering_fields = ["price", "rating", "date_added"]
     filterset_fields = [
         "category", "type", "destination", "is_featured", "is_trending",
-        "is_premium", "is_international", "is_kerala", "is_active",
+        "is_premium", "is_international", "is_kerala", "is_active", "duration",
     ]
 
     def get_queryset(self):
@@ -599,7 +599,7 @@ class PackageViewSet(BaseModelViewSet):
 class HouseboatViewSet(BaseModelViewSet):
     search_fields = ["name", "route", "description"]
     ordering_fields = ["price", "bedrooms", "date_added"]
-    filterset_fields = ["type", "is_featured", "is_trending", "is_premium", "is_active"]
+    filterset_fields = ["type", "is_featured", "is_trending", "is_premium", "is_active", "duration"]
 
     def get_queryset(self):
         queryset = Houseboat.objects.all().only(
@@ -690,6 +690,15 @@ class CruiseViewSet(BaseModelViewSet):
             elif is_international.lower() in ['false', '0', 'no']:
                 queryset = queryset.filter(is_international=False)
         
+        # Filter by duration (integer only)
+        duration = self.request.query_params.get('duration')
+        if duration:
+            try:
+                duration_int = int(duration)
+                queryset = queryset.filter(duration__icontains=str(duration_int))
+            except (ValueError, TypeError):
+                pass
+        
         return queryset
 
     def get_serializer_class(self):
@@ -767,6 +776,15 @@ class IslandStayViewSet(BaseModelViewSet):
                 queryset = queryset.filter(is_international=True)
             elif is_international.lower() in ['false', '0', 'no']:
                 queryset = queryset.filter(is_international=False)
+        
+        # Filter by duration (integer only)
+        duration = self.request.query_params.get('duration')
+        if duration:
+            try:
+                duration_int = int(duration)
+                queryset = queryset.filter(duration__icontains=str(duration_int))
+            except (ValueError, TypeError):
+                pass
         
         return queryset
 
@@ -1011,6 +1029,66 @@ class EnquiryViewSet(BaseModelViewSet):
         return self.success_response(
             f"Enquiries for {service_param} retrieved successfully.", serializer.data
         )
+
+    @action(detail=False, methods=["get"], url_path="related-item")
+    def related_item(self, request):
+        """
+        Get the related model item (Hotel, Package, Houseboat, Cruise, IslandStay) for an enquiry.
+        
+        Query params:
+        - enquiry_id: The ID of the enquiry (required)
+        
+        Returns the detailed view of the related model item if:
+        - general = False
+        - model_uuid is not null
+        - service field maps to a valid model
+        """
+        enquiry_id = request.query_params.get("enquiry_id")
+        if not enquiry_id:
+            return self.error_response("Enquiry ID parameter is required.")
+        
+        try:
+            enquiry = Enquiry.objects.get(id=enquiry_id)
+        except Enquiry.DoesNotExist:
+            return self.error_response("Enquiry not found.", status_code=status.HTTP_404_NOT_FOUND)
+        
+        # Check if it's a general enquiry
+        if enquiry.general:
+            return self.error_response("This is a general enquiry with no related item.")
+        
+        # Check if model_uuid exists
+        if not enquiry.model_uuid:
+            return self.error_response("No related item found for this enquiry.")
+        
+        # Map service to model and serializer
+        service_model_map = {
+            "hotels": (Hotel, HotelDetailSerializer),
+            "packages-kerala": (Package, PackageDetailSerializer),
+            "packages-international": (Package, PackageDetailSerializer),
+            "houseboats": (Houseboat, HouseboatDetailSerializer),
+            "cruises": (Cruise, CruiseDetailSerializer),
+            "island-stays": (IslandStay, IslandStayDetailSerializer),
+        }
+        
+        if enquiry.service not in service_model_map:
+            return self.error_response(
+                f"Service '{enquiry.service}' does not have a related model item."
+            )
+        
+        model_class, serializer_class = service_model_map[enquiry.service]
+        
+        try:
+            related_item = model_class.objects.get(id=enquiry.model_uuid)
+            serializer = serializer_class(related_item, context={"request": request})
+            return self.success_response(
+                f"Related {enquiry.service} item retrieved successfully.",
+                serializer.data
+            )
+        except model_class.DoesNotExist:
+            return self.error_response(
+                f"Related {enquiry.service} item not found.",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def download_excel(self, request):
