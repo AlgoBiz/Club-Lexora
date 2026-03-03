@@ -260,7 +260,7 @@ class Package(BaseModel):
     drop_location = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., Airport / Hotel")
     transportation_mode = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., AC Vehicle")
     stay_type = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., 4-Star Resort")
-    guide = models.CharField(max_length=100, null=True, blank=True, help_text="e.g., Included")
+    guide = models.BooleanField(default=False, help_text="Guide included")
     meals_included = models.CharField(max_length=255, null=True, blank=True, help_text="e.g., Breakfast & Dinner")
 
     class Meta:
