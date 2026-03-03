@@ -316,19 +316,27 @@ class UserViewSet(viewsets.ModelViewSet):
 class HotelViewSet(BaseModelViewSet):
     search_fields = ["name", "location", "description"]
     ordering_fields = ["price_per_night", "rating", "date_added"]
-    filterset_fields = ["rating", "is_featured", "is_trending", "is_premium", "is_active"]
+    filterset_fields = ["rating", "is_featured", "is_trending", "is_premium", "is_active", "is_international"]
     # permission_classes = [AllowAny]
 
     def get_queryset(self):
         queryset = Hotel.objects.all().only(
             "id", "auto_id", "name", "slug", "location", "rating",
             "price_per_night", "image", "amenities", "is_featured",
-            "is_trending", "is_premium", "is_active", "date_added",
+            "is_trending", "is_premium", "is_active", "is_international", "date_added",
         )
         
         # Filter by active status for unauthenticated users
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
+        
+        # Filter by is_international query parameter
+        is_international = self.request.query_params.get('is_international')
+        if is_international is not None:
+            if is_international.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(is_international=True)
+            elif is_international.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(is_international=False)
         
         # Location filtering
         location = self.request.query_params.get('location')
@@ -407,6 +415,15 @@ class HotelViewSet(BaseModelViewSet):
         queryset = self.get_queryset().filter(is_featured=True)
         if not request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
+        
+        # Filter by is_international if provided
+        is_international = request.query_params.get('is_international')
+        if is_international is not None:
+            if is_international.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(is_international=True)
+            elif is_international.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(is_international=False)
+        
         serializer = HotelListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Featured hotels retrieved successfully.", serializer.data)
 
@@ -415,6 +432,15 @@ class HotelViewSet(BaseModelViewSet):
         queryset = self.get_queryset().filter(is_trending=True)
         if not request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
+        
+        # Filter by is_international if provided
+        is_international = request.query_params.get('is_international')
+        if is_international is not None:
+            if is_international.lower() in ['true', '1', 'yes']:
+                queryset = queryset.filter(is_international=True)
+            elif is_international.lower() in ['false', '0', 'no']:
+                queryset = queryset.filter(is_international=False)
+        
         serializer = HotelListSerializer(queryset, many=True, context={"request": request})
         return self.success_response("Trending hotels retrieved successfully.", serializer.data)
 

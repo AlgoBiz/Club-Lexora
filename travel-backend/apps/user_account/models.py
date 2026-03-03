@@ -179,6 +179,7 @@ class Hotel(BaseModel):
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
+    is_international = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-date_added"]

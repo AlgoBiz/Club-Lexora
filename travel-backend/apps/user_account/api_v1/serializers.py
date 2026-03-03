@@ -108,7 +108,7 @@ class HotelListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "auto_id", "name", "slug", "location", "rating",
             "price_per_night", "image_url", "amenities_list", "youtube_link",
-            "is_featured", "is_trending", "is_premium", "is_active",
+            "is_featured", "is_trending", "is_premium", "is_active", "is_international",
         ]
 
     def get_amenities_list(self, obj):
