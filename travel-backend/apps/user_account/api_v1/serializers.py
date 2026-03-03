@@ -803,6 +803,8 @@ class EnquiryListSerializer(serializers.ModelSerializer):
             "houseboat_duration", "bedrooms", "boarding_date",
             # Cruise fields
             "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
+            # Flight fields
+            "ending_date", "flight_ticket_required",
         ]
 
 
@@ -828,6 +830,8 @@ class EnquiryCreateSerializer(serializers.ModelSerializer):
             "houseboat_duration", "bedrooms", "boarding_date",
             # Cruise fields
             "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
+            # Flight fields
+            "ending_date", "flight_ticket_required",
         ]
         extra_kwargs = {
             "model_uuid": {"required": False},
@@ -858,6 +862,8 @@ class EnquiryUpdateSerializer(serializers.ModelSerializer):
             "houseboat_duration", "bedrooms", "boarding_date",
             # Cruise fields
             "preferred_departure_date", "cruise_duration", "passengers", "cabin_type",
+            # Flight fields
+            "ending_date", "flight_ticket_required",
         ]
 
 

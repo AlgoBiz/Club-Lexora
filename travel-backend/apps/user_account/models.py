@@ -492,6 +492,10 @@ class Enquiry(BaseModel):
     # Additional fields
     general = models.BooleanField(default=False)
     tell_about_trip = models.TextField(null=True, blank=True)
+    
+    # Flight-specific fields
+    ending_date = models.DateField(null=True, blank=True)
+    flight_ticket_required = models.BooleanField(default=False, null=True, blank=True)
 
     class Meta:
         ordering = ["-date_added"]
