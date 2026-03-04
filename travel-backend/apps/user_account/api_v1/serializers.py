@@ -446,77 +446,139 @@ class HouseboatCreateUpdateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         """
-        Custom update method to handle existing_gallery_image_X fields.
+        Custom update method to handle gallery images.
+        Supports two formats:
+        1. New format: existing_gallery_images (JSON array) + deleted_gallery_images (JSON array)
+        2. Legacy format: existing_gallery_image_1, existing_gallery_image_2, etc.
         """
         request = self.context.get('request')
-
+        
         if request:
-            # Collect existing gallery images from request data
-            existing_images = {}
-            for i in range(1, 6):
-                field_name = f'existing_gallery_image_{i}'
-                if field_name in request.data:
-                    existing_url = request.data[field_name]
-                    for j in range(1, 6):
-                        gallery_field = f'gallery_image_{j}'
+            import json
+            
+            # Check for new format: existing_gallery_images JSON field
+            existing_gallery_images_json = request.data.get('existing_gallery_images')
+            deleted_gallery_images_json = request.data.get('deleted_gallery_images')
+            
+            if existing_gallery_images_json:
+                # New format: Parse JSON array of existing images
+                try:
+                    if isinstance(existing_gallery_images_json, str):
+                        existing_urls = json.loads(existing_gallery_images_json)
+                    else:
+                        existing_urls = existing_gallery_images_json
+                    
+                    # Parse deleted images
+                    deleted_urls = []
+                    if deleted_gallery_images_json:
+                        if isinstance(deleted_gallery_images_json, str):
+                            deleted_urls = json.loads(deleted_gallery_images_json)
+                        else:
+                            deleted_urls = deleted_gallery_images_json
+                    
+                    # Collect existing images that should be kept
+                    kept_images = []
+                    for i in range(1, 6):
+                        gallery_field = f'gallery_image_{i}'
                         current_image = getattr(instance, gallery_field)
-                        if current_image and current_image.url in existing_url:
-                            existing_images[i] = current_image
-                            break
-
-            # Only process gallery images if existing_gallery_image fields are present
-            # This prevents clearing images when the frontend doesn't send gallery data
-            has_existing_gallery_fields = any(
-                f'existing_gallery_image_{i}' in request.data for i in range(1, 6)
-            )
-
-            if has_existing_gallery_fields:
-                # Clear all gallery images first
-                for i in range(1, 6):
-                    field_name = f'gallery_image_{i}'
-                    old_image = getattr(instance, field_name)
-                    if old_image and i not in existing_images:
-                        is_kept = False
-                        for kept_image in existing_images.values():
-                            if old_image.name == kept_image.name:
-                                is_kept = True
-                                break
-                        if not is_kept:
-                            old_image.delete(save=False)
-
-                    setattr(instance, field_name, None)
-
-                # Reassign existing images to sequential positions
-                for idx, (position, image) in enumerate(sorted(existing_images.items()), start=1):
-                    field_name = f'gallery_image_{idx}'
-                    setattr(instance, field_name, image)
-
-                # Handle new gallery image uploads
-                next_position = len(existing_images) + 1
-                for i in range(1, 6):
-                    field_name = f'gallery_image_{i}'
-                    if field_name in validated_data:
-                        new_image = validated_data.pop(field_name)
-                        if new_image and next_position <= 5:
-                            setattr(instance, f'gallery_image_{next_position}', new_image)
-                            next_position += 1
+                        if current_image:
+                            image_url = current_image.url
+                            # Keep if in existing_urls and not in deleted_urls
+                            if any(url in image_url for url in existing_urls) and not any(url in image_url for url in deleted_urls):
+                                kept_images.append(current_image)
+                            else:
+                                # Delete images that are not kept
+                                current_image.delete(save=False)
+                    
+                    # Clear all gallery image fields
+                    for i in range(1, 6):
+                        setattr(instance, f'gallery_image_{i}', None)
+                    
+                    # Reassign kept images to sequential positions
+                    for idx, image in enumerate(kept_images, start=1):
+                        if idx <= 5:
+                            setattr(instance, f'gallery_image_{idx}', image)
+                    
+                    # Add new gallery images after existing ones
+                    next_position = len(kept_images) + 1
+                    for i in range(1, 6):
+                        field_name = f'gallery_image_{i}'
+                        if field_name in validated_data:
+                            new_image = validated_data.pop(field_name)
+                            if new_image and next_position <= 5:
+                                setattr(instance, f'gallery_image_{next_position}', new_image)
+                                next_position += 1
+                
+                except (json.JSONDecodeError, TypeError) as e:
+                    # If JSON parsing fails, fall back to legacy format
+                    pass
+            
             else:
-                # If no existing_gallery_image fields, only update if new images are provided
+                # Legacy format: existing_gallery_image_1, existing_gallery_image_2, etc.
+                existing_images = {}
                 for i in range(1, 6):
-                    field_name = f'gallery_image_{i}'
-                    if field_name in validated_data:
-                        new_image = validated_data.pop(field_name)
-                        if new_image:
-                            # Delete old image if exists
-                            old_image = getattr(instance, field_name)
-                            if old_image:
+                    field_name = f'existing_gallery_image_{i}'
+                    if field_name in request.data:
+                        existing_url = request.data[field_name]
+                        for j in range(1, 6):
+                            gallery_field = f'gallery_image_{j}'
+                            current_image = getattr(instance, gallery_field)
+                            if current_image and current_image.url in existing_url:
+                                existing_images[i] = current_image
+                                break
+                
+                # Only process gallery images if existing_gallery_image fields are present
+                has_existing_gallery_fields = any(
+                    f'existing_gallery_image_{i}' in request.data for i in range(1, 6)
+                )
+                
+                if has_existing_gallery_fields:
+                    # Clear all gallery images first
+                    for i in range(1, 6):
+                        field_name = f'gallery_image_{i}'
+                        old_image = getattr(instance, field_name)
+                        if old_image and i not in existing_images:
+                            is_kept = False
+                            for kept_image in existing_images.values():
+                                if old_image.name == kept_image.name:
+                                    is_kept = True
+                                    break
+                            if not is_kept:
                                 old_image.delete(save=False)
-                            setattr(instance, field_name, new_image)
-
+                        
+                        setattr(instance, field_name, None)
+                    
+                    # Reassign existing images to sequential positions
+                    for idx, (position, image) in enumerate(sorted(existing_images.items()), start=1):
+                        field_name = f'gallery_image_{idx}'
+                        setattr(instance, field_name, image)
+                    
+                    # Handle new gallery image uploads
+                    next_position = len(existing_images) + 1
+                    for i in range(1, 6):
+                        field_name = f'gallery_image_{i}'
+                        if field_name in validated_data:
+                            new_image = validated_data.pop(field_name)
+                            if new_image and next_position <= 5:
+                                setattr(instance, f'gallery_image_{next_position}', new_image)
+                                next_position += 1
+                else:
+                    # If no existing_gallery_image fields, only update if new images are provided
+                    for i in range(1, 6):
+                        field_name = f'gallery_image_{i}'
+                        if field_name in validated_data:
+                            new_image = validated_data.pop(field_name)
+                            if new_image:
+                                # Delete old image if exists
+                                old_image = getattr(instance, field_name)
+                                if old_image:
+                                    old_image.delete(save=False)
+                                setattr(instance, field_name, new_image)
+        
         # Update all other fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
+        
         instance.save()
         return instance
 
