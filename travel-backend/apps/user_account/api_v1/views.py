@@ -484,8 +484,23 @@ class PackageViewSet(BaseModelViewSet):
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
         
-        # Fuzzy search implementation
+        # Get query parameters
         search_query = self.request.query_params.get('search')
+        destination = self.request.query_params.get('destination')
+        
+        # Destination filtering by UUID or name (priority filter)
+        if destination:
+            try:
+                # Try to parse as UUID
+                import uuid
+                uuid.UUID(destination)
+                queryset = queryset.filter(destination__id=destination)
+            except (ValueError, AttributeError):
+                # Otherwise filter by destination name (case-insensitive)
+                queryset = queryset.filter(destination__name__icontains=destination)
+        
+        # Fuzzy search implementation (only if search query is provided)
+        # If destination is specified, search within that destination
         if search_query:
             # Use case-insensitive contains for fuzzy matching
             # This works across all databases (SQLite, PostgreSQL, MySQL)
@@ -516,18 +531,6 @@ class PackageViewSet(BaseModelViewSet):
         season = self.request.query_params.get('season')
         if season and season.lower() != 'all':
             queryset = queryset.filter(season=season.lower())
-        
-        # Destination filtering by UUID or name
-        destination = self.request.query_params.get('destination')
-        if destination:
-            try:
-                # Try to parse as UUID
-                import uuid
-                uuid.UUID(destination)
-                queryset = queryset.filter(destination__id=destination)
-            except (ValueError, AttributeError):
-                # Otherwise filter by destination name (case-insensitive)
-                queryset = queryset.filter(destination__name__icontains=destination)
         
         return queryset
     def get_object(self):
