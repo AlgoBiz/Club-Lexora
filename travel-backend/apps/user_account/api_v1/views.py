@@ -471,7 +471,7 @@ class PackageViewSet(BaseModelViewSet):
 
     def get_queryset(self):
         from django.db.models import Q
-        from django.contrib.postgres.search import TrigramSimilarity
+        from django.conf import settings
         
         queryset = Package.objects.all().select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
@@ -487,20 +487,14 @@ class PackageViewSet(BaseModelViewSet):
         # Fuzzy search implementation
         search_query = self.request.query_params.get('search')
         if search_query:
-            try:
-                # Try trigram similarity for PostgreSQL
-                queryset = queryset.annotate(
-                    similarity=TrigramSimilarity('title', search_query) +
-                               TrigramSimilarity('location', search_query) +
-                               TrigramSimilarity('description', search_query)
-                ).filter(similarity__gt=0.1).order_by('-similarity')
-            except Exception:
-                # Fallback to case-insensitive contains for SQLite/other databases
-                queryset = queryset.filter(
-                    Q(title__icontains=search_query) |
-                    Q(location__icontains=search_query) |
-                    Q(description__icontains=search_query)
-                )
+            # Use case-insensitive contains for fuzzy matching
+            # This works across all databases (SQLite, PostgreSQL, MySQL)
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(location__icontains=search_query) |
+                Q(description__icontains=search_query) |
+                Q(destination__name__icontains=search_query)
+            )
         
         # Price filtering
         min_price = self.request.query_params.get('min_price')
