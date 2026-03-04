@@ -449,7 +449,7 @@ class HouseboatCreateUpdateSerializer(serializers.ModelSerializer):
         Custom update method to handle existing_gallery_image_X fields.
         """
         request = self.context.get('request')
-        
+
         if request:
             # Collect existing gallery images from request data
             existing_images = {}
@@ -463,43 +463,63 @@ class HouseboatCreateUpdateSerializer(serializers.ModelSerializer):
                         if current_image and current_image.url in existing_url:
                             existing_images[i] = current_image
                             break
-            
-            # Clear all gallery images first
-            for i in range(1, 6):
-                field_name = f'gallery_image_{i}'
-                old_image = getattr(instance, field_name)
-                if old_image and i not in existing_images:
-                    is_kept = False
-                    for kept_image in existing_images.values():
-                        if old_image.name == kept_image.name:
-                            is_kept = True
-                            break
-                    if not is_kept:
-                        old_image.delete(save=False)
-                
-                setattr(instance, field_name, None)
-            
-            # Reassign existing images to sequential positions
-            for idx, (position, image) in enumerate(sorted(existing_images.items()), start=1):
-                field_name = f'gallery_image_{idx}'
-                setattr(instance, field_name, image)
-            
-            # Handle new gallery image uploads
-            next_position = len(existing_images) + 1
-            for i in range(1, 6):
-                field_name = f'gallery_image_{i}'
-                if field_name in validated_data:
-                    new_image = validated_data.pop(field_name)
-                    if new_image and next_position <= 5:
-                        setattr(instance, f'gallery_image_{next_position}', new_image)
-                        next_position += 1
-        
+
+            # Only process gallery images if existing_gallery_image fields are present
+            # This prevents clearing images when the frontend doesn't send gallery data
+            has_existing_gallery_fields = any(
+                f'existing_gallery_image_{i}' in request.data for i in range(1, 6)
+            )
+
+            if has_existing_gallery_fields:
+                # Clear all gallery images first
+                for i in range(1, 6):
+                    field_name = f'gallery_image_{i}'
+                    old_image = getattr(instance, field_name)
+                    if old_image and i not in existing_images:
+                        is_kept = False
+                        for kept_image in existing_images.values():
+                            if old_image.name == kept_image.name:
+                                is_kept = True
+                                break
+                        if not is_kept:
+                            old_image.delete(save=False)
+
+                    setattr(instance, field_name, None)
+
+                # Reassign existing images to sequential positions
+                for idx, (position, image) in enumerate(sorted(existing_images.items()), start=1):
+                    field_name = f'gallery_image_{idx}'
+                    setattr(instance, field_name, image)
+
+                # Handle new gallery image uploads
+                next_position = len(existing_images) + 1
+                for i in range(1, 6):
+                    field_name = f'gallery_image_{i}'
+                    if field_name in validated_data:
+                        new_image = validated_data.pop(field_name)
+                        if new_image and next_position <= 5:
+                            setattr(instance, f'gallery_image_{next_position}', new_image)
+                            next_position += 1
+            else:
+                # If no existing_gallery_image fields, only update if new images are provided
+                for i in range(1, 6):
+                    field_name = f'gallery_image_{i}'
+                    if field_name in validated_data:
+                        new_image = validated_data.pop(field_name)
+                        if new_image:
+                            # Delete old image if exists
+                            old_image = getattr(instance, field_name)
+                            if old_image:
+                                old_image.delete(save=False)
+                            setattr(instance, field_name, new_image)
+
         # Update all other fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        
+
         instance.save()
         return instance
+
 
 
 class CruiseListSerializer(serializers.ModelSerializer):
