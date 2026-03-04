@@ -989,9 +989,10 @@ class EnquiryViewSet(BaseModelViewSet):
     search_fields = ["name", "email", "phone", "service", "destination"]
     ordering_fields = ["travel_date", "date_added"]
     filterset_fields = ["status", "service", "is_active", "general"]
+    ordering = ["-date_added"]  # Most recent first
 
     def get_queryset(self):
-        queryset = Enquiry.objects.all().select_related("assigned_to")
+        queryset = Enquiry.objects.all().select_related("assigned_to").order_by("-date_added")
         
         # Filter by active status for unauthenticated users
         if not self.request.user.is_authenticated:
