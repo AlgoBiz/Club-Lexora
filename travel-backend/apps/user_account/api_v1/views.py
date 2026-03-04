@@ -464,7 +464,7 @@ class PackageViewSet(BaseModelViewSet):
     search_fields = ["title", "location", "description"]
     ordering_fields = ["price", "rating", "date_added"]
     filterset_fields = [
-        "category", "type", "destination", "is_featured", "is_trending",
+        "category", "type", "destination", "season", "is_featured", "is_trending",
         "is_premium", "is_international", "is_kerala", "is_active", "duration",
     ]
 
@@ -472,7 +472,7 @@ class PackageViewSet(BaseModelViewSet):
         queryset = Package.objects.all().select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
-            "reviews_count", "category", "type", "is_featured", "is_trending",
+            "reviews_count", "category", "type", "season", "is_featured", "is_trending",
             "is_premium", "is_international", "is_kerala", "is_active", "date_added",
         )
         
@@ -495,6 +495,23 @@ class PackageViewSet(BaseModelViewSet):
                 queryset = queryset.filter(price__lte=float(max_price))
             except (ValueError, TypeError):
                 pass
+        
+        # Season filtering (exclude 'all' season filter)
+        season = self.request.query_params.get('season')
+        if season and season.lower() != 'all':
+            queryset = queryset.filter(season=season.lower())
+        
+        # Destination filtering by UUID or name
+        destination = self.request.query_params.get('destination')
+        if destination:
+            try:
+                # Try to parse as UUID
+                import uuid
+                uuid.UUID(destination)
+                queryset = queryset.filter(destination__id=destination)
+            except (ValueError, AttributeError):
+                # Otherwise filter by destination name (case-insensitive)
+                queryset = queryset.filter(destination__name__icontains=destination)
         
         return queryset
     def get_object(self):

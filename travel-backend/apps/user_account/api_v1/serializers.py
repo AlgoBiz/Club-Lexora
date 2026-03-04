@@ -231,7 +231,7 @@ class PackageListSerializer(serializers.ModelSerializer):
             "id", "auto_id", "title", "slug", "destination", "destination_name",
             "location", "duration", "group_size", "price", "original_price",
             "discount_percentage", "image_url", "rating", "reviews_count",
-            "category", "type", "youtube_link", "is_featured", "is_trending", "is_premium",
+            "category", "type", "season", "youtube_link", "is_featured", "is_trending", "is_premium",
             "is_international", "is_kerala", 
             "no_of_days", "no_of_nights", "pickup_location", "drop_location",
             "transportation_mode", "stay_type", "guide", "meals_included",

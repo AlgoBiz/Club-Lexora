@@ -223,6 +223,13 @@ class Package(BaseModel):
         ("kerala", "Kerala"),
     ]
 
+    SEASON_CHOICES = [
+        ("all", "All"),
+        ("monsoon", "Monsoon"),
+        ("winter", "Winter"),
+        ("summer", "Summer"),
+    ]
+
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     destination = models.ForeignKey(Destination, on_delete=models.CASCADE, related_name='packages')
@@ -243,6 +250,7 @@ class Package(BaseModel):
     reviews_count = models.IntegerField(default=0)
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     type = models.CharField(max_length=50, choices=TYPE_CHOICES)
+    season = models.CharField(max_length=50, choices=SEASON_CHOICES, default="all", help_text="Best season to visit")
     is_featured = models.BooleanField(default=False)
     is_trending = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
