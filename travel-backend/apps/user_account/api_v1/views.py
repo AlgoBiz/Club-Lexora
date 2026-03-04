@@ -15,6 +15,7 @@ from datetime import date
 from django.db.models import Count
 from django.db.models.functions import TruncMonth
 
+
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
     Destination, DestinationEnquiry, OfferBanner
@@ -469,6 +470,9 @@ class PackageViewSet(BaseModelViewSet):
     ]
 
     def get_queryset(self):
+        from django.db.models import Q
+        from django.contrib.postgres.search import TrigramSimilarity
+        
         queryset = Package.objects.all().select_related('destination').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
@@ -479,6 +483,24 @@ class PackageViewSet(BaseModelViewSet):
         # Filter by active status for unauthenticated users
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
+        
+        # Fuzzy search implementation
+        search_query = self.request.query_params.get('search')
+        if search_query:
+            try:
+                # Try trigram similarity for PostgreSQL
+                queryset = queryset.annotate(
+                    similarity=TrigramSimilarity('title', search_query) +
+                               TrigramSimilarity('location', search_query) +
+                               TrigramSimilarity('description', search_query)
+                ).filter(similarity__gt=0.1).order_by('-similarity')
+            except Exception:
+                # Fallback to case-insensitive contains for SQLite/other databases
+                queryset = queryset.filter(
+                    Q(title__icontains=search_query) |
+                    Q(location__icontains=search_query) |
+                    Q(description__icontains=search_query)
+                )
         
         # Price filtering
         min_price = self.request.query_params.get('min_price')
