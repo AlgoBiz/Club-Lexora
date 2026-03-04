@@ -1490,25 +1490,58 @@ def dashboard_stats_view(request):
     Dashboard API endpoint that provides essential statistics for admin dashboard.
     Returns counts for hotels, packages, flight enquiries, general enquiries, 
     featured hotels, and trending hotels.
+    
+    Query Parameters:
+    - month: Filter enquiries by month number (1-12)
+    - year: Filter enquiries by year (e.g., 2026)
+    
+    Note: Month and year filters only apply to enquiry counts (flight_enquiries_count and general_enquiries_count).
+    Other counts (hotels, packages, featured, trending) are not affected by date filters.
     """
     try:
-        # Hotels count
+        # Get query parameters
+        month_param = request.query_params.get('month')
+        year_param = request.query_params.get('year')
+        
+        # Hotels count (not affected by date filters)
         hotels_count = Hotel.objects.all().count()
         
-        # Packages count
+        # Packages count (not affected by date filters)
         packages_count = Package.objects.all().count()
         
-        # Flight Enquiries count
-        flight_enquiries_count = FlightEnquiry.objects.all().count()
-        
-        # General Enquiries count
-        general_enquiries_count = Enquiry.objects.all().count()
-        
-        # Featured Hotels count
+        # Featured Hotels count (not affected by date filters)
         featured_hotels_count = Hotel.objects.filter(is_featured=True).count()
         
-        # Trending Hotels count
+        # Trending Hotels count (not affected by date filters)
         trending_hotels_count = Hotel.objects.filter(is_trending=True).count()
+        
+        # Base querysets for enquiries
+        flight_enquiry_queryset = FlightEnquiry.objects.all()
+        general_enquiry_queryset = Enquiry.objects.all()
+        
+        # Apply date filters to enquiries if provided
+        if year_param:
+            try:
+                year = int(year_param)
+                flight_enquiry_queryset = flight_enquiry_queryset.filter(date_added__year=year)
+                general_enquiry_queryset = general_enquiry_queryset.filter(date_added__year=year)
+            except (ValueError, TypeError):
+                pass
+        
+        if month_param:
+            try:
+                month = int(month_param)
+                if 1 <= month <= 12:
+                    flight_enquiry_queryset = flight_enquiry_queryset.filter(date_added__month=month)
+                    general_enquiry_queryset = general_enquiry_queryset.filter(date_added__month=month)
+            except (ValueError, TypeError):
+                pass
+        
+        # Flight Enquiries count (filtered by date)
+        flight_enquiries_count = flight_enquiry_queryset.count()
+        
+        # General Enquiries count (filtered by date)
+        general_enquiries_count = general_enquiry_queryset.count()
         
         # Prepare response data
         data = {
@@ -1533,14 +1566,44 @@ def dashboard_stats_view(request):
 def dashboard_analytics_view(request):
     """
     Dashboard Analytics API endpoint that provides:
-    - Monthly enquiry counts for all months
+    - Monthly enquiry counts for all months (or filtered by month/year)
     - Top services by enquiry count (in decreasing order)
     - 5 latest recent enquiries
+    
+    Query Parameters:
+    - month: Filter by month number (1-12)
+    - year: Filter by year (e.g., 2026)
     """
     try:
+        from django.db.models import Q
+        from datetime import datetime
+        
+        # Get query parameters
+        month_param = request.query_params.get('month')
+        year_param = request.query_params.get('year')
+        
+        # Base queryset for enquiries
+        enquiry_queryset = Enquiry.objects.all()
+        
+        # Apply date filters if provided
+        if year_param:
+            try:
+                year = int(year_param)
+                enquiry_queryset = enquiry_queryset.filter(date_added__year=year)
+            except (ValueError, TypeError):
+                pass
+        
+        if month_param:
+            try:
+                month = int(month_param)
+                if 1 <= month <= 12:
+                    enquiry_queryset = enquiry_queryset.filter(date_added__month=month)
+            except (ValueError, TypeError):
+                pass
+        
         # 1. Monthly Analytics - Get enquiry counts by month
         monthly_data = (
-            Enquiry.objects
+            enquiry_queryset
             .annotate(month=TruncMonth('date_added'))
             .values('month')
             .annotate(count=Count('id'))
@@ -1560,7 +1623,7 @@ def dashboard_analytics_view(request):
 
         # 2. Top Services by Enquiry Count (in decreasing order)
         service_counts = (
-            Enquiry.objects
+            enquiry_queryset
             .values('service')
             .annotate(count=Count('id'))
             .order_by('-count')
@@ -1577,9 +1640,9 @@ def dashboard_analytics_view(request):
                     'count': item['count']
                 })
 
-        # 3. Latest 5 Recent Enquiries
+        # 3. Latest 5 Recent Enquiries (filtered by date if params provided)
         recent_enquiries = (
-            Enquiry.objects
+            enquiry_queryset
             .select_related('assigned_to')
             .order_by('-date_added')[:5]
         )
@@ -1601,8 +1664,8 @@ def dashboard_analytics_view(request):
                 'assigned_to': enquiry.assigned_to.full_name if enquiry.assigned_to else None,
             })
 
-        # 4. Total Enquiry Count
-        total_enquiries = Enquiry.objects.count()
+        # 4. Total Enquiry Count (filtered)
+        total_enquiries = enquiry_queryset.count()
 
         # Prepare response data
         data = {
