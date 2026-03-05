@@ -12,10 +12,22 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            "id", "username", "email", "full_name", "phone", "is_active", 
+            "id", "username", "email", "full_name", "country_code", "phone", "is_active", 
             "can_manage_enquiries", "can_manage_administration", "date_joined"
         ]
         read_only_fields = ["id", "date_joined"]
+    
+    def validate_country_code(self, value):
+        """
+        Validate country code - can be any length, allows any characters
+        """
+        if value is not None and value != "":
+            # Convert to string and strip whitespace
+            value = str(value).strip()
+            # Allow any non-empty value
+            if not value:
+                return None
+        return value
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
@@ -27,6 +39,18 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "can_manage_administration", "is_admin", "is_superuser", "date_joined",
         ]
         read_only_fields = ["id", "date_joined", "phone_verified", "email_verified"]
+    
+    def validate_country_code(self, value):
+        """
+        Validate country code - can be any length, allows any characters
+        """
+        if value is not None and value != "":
+            # Convert to string and strip whitespace
+            value = str(value).strip()
+            # Allow any non-empty value
+            if not value:
+                return None
+        return value
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -49,6 +73,18 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate_email(self, value):
         if value and User.objects.filter(email=value).exists():
             raise serializers.ValidationError("A user with this email already exists.")
+        return value
+    
+    def validate_country_code(self, value):
+        """
+        Validate country code - can be any length, allows any characters
+        """
+        if value is not None and value != "":
+            # Convert to string and strip whitespace
+            value = str(value).strip()
+            # Allow any non-empty value
+            if not value:
+                return None
         return value
     
     def create(self, validated_data):

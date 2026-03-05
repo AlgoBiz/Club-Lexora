@@ -266,7 +266,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def get_serializer_class(self):
-        if self.action == "retrieve":
+        if self.action in ["retrieve", "update", "partial_update"]:
             return UserDetailSerializer
         if self.action == "update_permissions":
             return UserUpdatePermissionsSerializer
@@ -312,6 +312,29 @@ class UserViewSet(viewsets.ModelViewSet):
             "User permissions updated successfully.",
             UserDetailSerializer(user).data,
         )
+    
+    def update(self, request, *args, **kwargs):
+        """
+        Update user profile (PUT).
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return error_response("Validation failed.", serializer.errors)
+        
+        user = serializer.save()
+        return success_response(
+            "User updated successfully.",
+            UserDetailSerializer(user, context={"request": request}).data,
+        )
+    
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Partially update user profile (PATCH).
+        """
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
 
 
 class HotelViewSet(BaseModelViewSet):

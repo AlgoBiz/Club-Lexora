@@ -77,7 +77,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(unique=True, max_length=255)
     full_name = models.CharField(_("Name of User"), blank=True, max_length=255)
-    country_code = models.CharField(max_length=5, null=True, blank=True, default=91)
+    country_code = models.CharField(max_length=10, null=True, blank=True, default="91")
     phone = models.CharField(max_length=30, null=True, blank=True)
     phone_verified = models.BooleanField(default=False)
     email = models.EmailField(_("email address"), blank=True)
