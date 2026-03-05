@@ -81,11 +81,11 @@ class HotelAdmin(admin.ModelAdmin):
 @admin.register(Package)
 class PackageAdmin(admin.ModelAdmin):
     list_display = (
-        "auto_id", "title", "location", "category", "type", "price",
+        "auto_id", "title", "location", "categories", "type", "price",
         "rating", "is_featured", "is_trending", "is_premium", "is_active", "date_added",
     )
     list_filter = (
-        "category", "type", "is_featured", "is_trending", "is_premium",
+        "categories", "type", "is_featured", "is_trending", "is_premium",
         "is_international", "is_kerala", "is_active", "date_added",
     )
     search_fields = ("title", "location", "description")
@@ -108,7 +108,7 @@ class PackageAdmin(admin.ModelAdmin):
             )
         }),
         ("Classification", {
-            "fields": ("rating", "reviews_count", "category", "type")
+            "fields": ("rating", "reviews_count", "categories", "type")
         }),
         ("Flags", {
             "fields": (
