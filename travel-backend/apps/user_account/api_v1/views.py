@@ -490,7 +490,7 @@ class PackageViewSet(BaseModelViewSet):
     search_fields = ["title", "location", "description"]
     ordering_fields = ["price", "rating", "date_added"]
     filterset_fields = [
-        "categories", "type", "destination", "season", "is_featured", "is_trending",
+        "categories", "type", "season", "is_featured", "is_trending",
         "is_premium", "is_international", "is_kerala", "is_active", "duration",
     ]
 
