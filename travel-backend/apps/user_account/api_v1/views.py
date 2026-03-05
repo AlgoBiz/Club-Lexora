@@ -523,16 +523,20 @@ class PackageViewSet(BaseModelViewSet):
             except (ValueError, AttributeError):
                 pass
         
-        # Destination filtering by UUID or name (priority filter)
+        # Destination filtering by UUID or fuzzy search (name/location)
         if destination:
             try:
-                # Try to parse as UUID
+                # Try to parse as UUID first
                 import uuid
                 uuid.UUID(destination)
                 queryset = queryset.filter(destination__id=destination)
             except (ValueError, AttributeError):
-                # Otherwise filter by destination name (case-insensitive)
-                queryset = queryset.filter(destination__name__icontains=destination)
+                # Otherwise do fuzzy search on destination name and location
+                # This will match any partial text in either field
+                queryset = queryset.filter(
+                    Q(destination__name__icontains=destination) |
+                    Q(destination__location__icontains=destination)
+                )
         
         # Fuzzy search implementation (only if search query is provided)
         # If destination is specified, search within that destination
