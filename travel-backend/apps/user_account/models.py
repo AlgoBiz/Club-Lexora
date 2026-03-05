@@ -234,7 +234,7 @@ class Package(BaseModel):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     destination = models.ForeignKey(Destination, on_delete=models.CASCADE, related_name='packages')
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='packages')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='packages', null=True, blank=True)
     location = models.CharField(max_length=255)
     description = models.TextField()
     duration = models.CharField(max_length=100, help_text="e.g., 5 Days / 4 Nights")
