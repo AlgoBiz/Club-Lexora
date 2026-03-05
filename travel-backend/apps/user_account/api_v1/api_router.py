@@ -4,6 +4,7 @@ from apps.user_account.api_v1.views import (
     UserViewSet, HotelViewSet, PackageViewSet, HouseboatViewSet,
     CruiseViewSet, IslandStayViewSet, FlightEnquiryViewSet, EnquiryViewSet,
     DestinationViewSet, DestinationEnquiryViewSet, OfferBannerViewSet,
+    CategoryViewSet,
     login_view, refresh_token_view, verify_token_view, logout_view,
     register_user_view, dashboard_stats_view, dashboard_analytics_view, package_category_list
 )
@@ -22,6 +23,7 @@ else:
 router.register(r"users", UserViewSet, basename="user")
 router.register(r"hotels", HotelViewSet, basename="hotel")
 router.register(r"packages", PackageViewSet, basename="package")
+router.register(r"categories", CategoryViewSet, basename="category")
 router.register(r"houseboats", HouseboatViewSet, basename="houseboat")
 router.register(r"cruises", CruiseViewSet, basename="cruise")
 router.register(r"island-stays", IslandStayViewSet, basename="island-stay")

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 from apps.user_account.models import (
-    User, Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry, OfferBanner
+    User, Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry, OfferBanner, Category
 )
 
 
@@ -311,6 +311,28 @@ class OfferBannerAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Banner Information", {
             "fields": ("name", "image")
+        }),
+        ("System Fields", {
+            "fields": ("id", "auto_id", "date_added", "date_updated"),
+            "classes": ("collapse",),
+        }),
+    )
+
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("auto_id", "name", "is_active", "date_added")
+    list_filter = ("is_active", "date_added")
+    search_fields = ("name", "description")
+    list_editable = ("is_active",)
+    readonly_fields = ("id", "auto_id", "date_added", "date_updated")
+
+    fieldsets = (
+        ("Basic Information", {
+            "fields": ("name", "description", "image")
+        }),
+        ("Status", {
+            "fields": ("is_active",)
         }),
         ("System Fields", {
             "fields": ("id", "auto_id", "date_added", "date_updated"),

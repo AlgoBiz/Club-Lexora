@@ -18,7 +18,7 @@ from django.db.models.functions import TruncMonth
 
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
-    Destination, DestinationEnquiry, OfferBanner
+    Destination, DestinationEnquiry, OfferBanner, Category
 )
 from apps.user_account.api_v1.serializers import (
     UserSerializer, UserDetailSerializer, ChangePasswordSerializer,
@@ -36,6 +36,7 @@ from apps.user_account.api_v1.serializers import (
     DestinationEnquiryListSerializer, DestinationEnquiryDetailSerializer,
     DestinationEnquiryCreateSerializer, DestinationEnquiryUpdateSerializer,
     OfferBannerSerializer,
+    CategoryListSerializer, CategoryDetailSerializer, CategoryCreateUpdateSerializer,
 )
 from apps.user_account.api_v1.permissions import (
     CanManageEnquiries, CanManageAdministration, IsAdminOrHasBothPermissions
@@ -234,6 +235,7 @@ class BaseModelViewSet(viewsets.ModelViewSet):
                         "previous": paginated_response.data.get("previous"),
                     }
                 })
+        
         
         # No pagination when there are no query parameters
         serializer = self.get_serializer(queryset, many=True)
@@ -496,7 +498,7 @@ class PackageViewSet(BaseModelViewSet):
         from django.db.models import Q
         from django.conf import settings
         
-        queryset = Package.objects.all().select_related('destination').only(
+        queryset = Package.objects.all().select_related('destination', 'category').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
             "reviews_count", "category", "type", "season", "is_featured", "is_trending",
@@ -510,6 +512,16 @@ class PackageViewSet(BaseModelViewSet):
         # Get query parameters
         search_query = self.request.query_params.get('search')
         destination = self.request.query_params.get('destination')
+        category = self.request.query_params.get('category')
+        
+        # Category filtering by UUID
+        if category:
+            try:
+                import uuid
+                uuid.UUID(category)
+                queryset = queryset.filter(category__id=category)
+            except (ValueError, AttributeError):
+                pass
         
         # Destination filtering by UUID or name (priority filter)
         if destination:
@@ -1768,3 +1780,53 @@ class OfferBannerViewSet(BaseModelViewSet):
         instance = self.get_object()
         instance.delete()
         return self.success_response("Offer banner deleted successfully.")
+
+
+class CategoryViewSet(BaseModelViewSet):
+    search_fields = ["name", "description"]
+    ordering_fields = ["name", "date_added"]
+    filterset_fields = ["is_active"]
+
+    def get_queryset(self):
+        queryset = Category.objects.all()
+        
+        # Filter by active status for unauthenticated users
+        if not self.request.user.is_authenticated:
+            queryset = queryset.filter(is_active=True)
+        
+        return queryset
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return CategoryListSerializer
+        if self.action == "retrieve":
+            return CategoryDetailSerializer
+        return CategoryCreateUpdateSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        category = serializer.save()
+        return self.success_response(
+            "Category created successfully.",
+            CategoryDetailSerializer(category, context={"request": request}).data,
+            status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        category = serializer.save()
+        return self.success_response(
+            "Category updated successfully.",
+            CategoryDetailSerializer(category, context={"request": request}).data,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return self.success_response("Category deleted successfully.")

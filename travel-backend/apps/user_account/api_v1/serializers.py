@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
-    Destination, DestinationEnquiry, OfferBanner
+    Destination, DestinationEnquiry, OfferBanner, Category
 )
 
 User = get_user_model()
@@ -260,6 +260,8 @@ class PackageListSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
     destination_name = serializers.CharField(source='destination.name', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    category_id = serializers.UUIDField(source='category.id', read_only=True)
 
     class Meta:
         model = Package
@@ -267,7 +269,7 @@ class PackageListSerializer(serializers.ModelSerializer):
             "id", "auto_id", "title", "slug", "destination", "destination_name",
             "location", "duration", "group_size", "price", "original_price",
             "discount_percentage", "image_url", "rating", "reviews_count",
-            "category", "type", "season", "youtube_link", "is_featured", "is_trending", "is_premium",
+            "category", "category_name", "category_id", "type", "season", "youtube_link", "is_featured", "is_trending", "is_premium",
             "is_international", "is_kerala", 
             "no_of_days", "no_of_nights", "pickup_location", "drop_location",
             "transportation_mode", "stay_type", "guide", "meals_included",
@@ -292,6 +294,8 @@ class PackageDetailSerializer(serializers.ModelSerializer):
     discount_percentage = serializers.SerializerMethodField()
     destination_name = serializers.CharField(source='destination.name', read_only=True)
     destination_location = serializers.CharField(source='destination.location', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    category_id = serializers.UUIDField(source='category.id', read_only=True)
 
     class Meta:
         model = Package
@@ -1087,3 +1091,46 @@ class OfferBannerSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         return _build_absolute_uri(self.context.get("request"), obj.image)
+
+
+class CategoryListSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = [
+            "id", "auto_id", "name", "description",
+            "image_url", "is_active", "date_added",
+        ]
+
+    def get_image_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image)
+
+
+class CategoryDetailSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    packages_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = "__all__"
+
+    def get_image_url(self, obj):
+        return _build_absolute_uri(self.context.get("request"), obj.image)
+
+    def get_packages_count(self, obj):
+        return obj.packages.filter(is_active=True).count()
+
+
+class CategoryCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        exclude = ["auto_id", "date_added", "date_updated"]
+
+    def validate_name(self, value):
+        queryset = Category.objects.filter(name__iexact=value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("A category with this name already exists.")
+        return value

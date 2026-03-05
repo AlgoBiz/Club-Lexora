@@ -204,20 +204,21 @@ class Destination(BaseModel):
     def __str__(self):
         return self.name
 
-class Package(BaseModel):
-    CATEGORY_CHOICES = [
-        # ("international", "International"),
-        # ("kerala", "Kerala Tourism"),
-        ("ayurveda", "Ayurveda"),
-        ("healthcare", "Healthcare"),
-        ("cultural", "Cultural"),
-        ("adventure", "Adventure"),
-        ("beach", "Beach"),
-        ("family_tour", "Family Tour"),
-        ("luxury_escape", "Luxury Escape"),
-        ("decorator", "Decorator"),
-    ]
+class Category(BaseModel):
+    """Package Category Model"""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    image = models.ImageField(upload_to="categories/", null=True, blank=True)
 
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Category"
+        verbose_name_plural = "Categories"
+
+    def __str__(self):
+        return self.name
+
+class Package(BaseModel):
     TYPE_CHOICES = [
         ("international", "International"),
         ("kerala", "Kerala"),
@@ -233,6 +234,7 @@ class Package(BaseModel):
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     destination = models.ForeignKey(Destination, on_delete=models.CASCADE, related_name='packages')
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='packages')
     location = models.CharField(max_length=255)
     description = models.TextField()
     duration = models.CharField(max_length=100, help_text="e.g., 5 Days / 4 Nights")
@@ -248,7 +250,6 @@ class Package(BaseModel):
     gallery_image_5 = models.ImageField(upload_to="packages/gallery/", null=True, blank=True)
     rating = models.DecimalField(max_digits=3, decimal_places=1, default=4.5)
     reviews_count = models.IntegerField(default=0)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
     type = models.CharField(max_length=50, choices=TYPE_CHOICES)
     season = models.CharField(max_length=50, choices=SEASON_CHOICES, default="all", help_text="Best season to visit")
     is_featured = models.BooleanField(default=False)
