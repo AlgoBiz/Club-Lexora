@@ -260,8 +260,8 @@ class PackageListSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     discount_percentage = serializers.SerializerMethodField()
     destination_name = serializers.CharField(source='destination.name', read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    category_id = serializers.UUIDField(source='category.id', read_only=True)
+    category_name = serializers.CharField(source='categories.name', read_only=True)
+    category_id = serializers.UUIDField(source='categories.id', read_only=True)
 
     class Meta:
         model = Package
@@ -269,7 +269,7 @@ class PackageListSerializer(serializers.ModelSerializer):
             "id", "auto_id", "title", "slug", "destination", "destination_name",
             "location", "duration", "group_size", "price", "original_price",
             "discount_percentage", "image_url", "rating", "reviews_count",
-            "category", "category_name", "category_id", "type", "season", "youtube_link", "is_featured", "is_trending", "is_premium",
+            "categories", "category_name", "category_id", "type", "season", "youtube_link", "is_featured", "is_trending", "is_premium",
             "is_international", "is_kerala", 
             "no_of_days", "no_of_nights", "pickup_location", "drop_location",
             "transportation_mode", "stay_type", "guide", "meals_included",
@@ -294,8 +294,8 @@ class PackageDetailSerializer(serializers.ModelSerializer):
     discount_percentage = serializers.SerializerMethodField()
     destination_name = serializers.CharField(source='destination.name', read_only=True)
     destination_location = serializers.CharField(source='destination.location', read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
-    category_id = serializers.UUIDField(source='category.id', read_only=True)
+    category_name = serializers.CharField(source='categories.name', read_only=True)
+    category_id = serializers.UUIDField(source='categories.id', read_only=True)
 
     class Meta:
         model = Package

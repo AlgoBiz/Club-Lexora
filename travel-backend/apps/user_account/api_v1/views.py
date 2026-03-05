@@ -519,7 +519,7 @@ class PackageViewSet(BaseModelViewSet):
             try:
                 import uuid
                 uuid.UUID(category)
-                queryset = queryset.filter(category__id=category)
+                queryset = queryset.filter(categories__id=category)
             except (ValueError, AttributeError):
                 pass
         
