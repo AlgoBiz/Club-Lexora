@@ -498,10 +498,10 @@ class PackageViewSet(BaseModelViewSet):
         from django.db.models import Q
         from django.conf import settings
         
-        queryset = Package.objects.all().select_related('destination', 'category').only(
+        queryset = Package.objects.all().select_related('destination', 'categories').only(
             "id", "auto_id", "title", "slug", "destination", "location", "duration",
             "group_size", "price", "original_price", "image", "rating",
-            "reviews_count", "category", "type", "season", "is_featured", "is_trending",
+            "reviews_count", "categories", "type", "season", "is_featured", "is_trending",
             "is_premium", "is_international", "is_kerala", "is_active", "date_added",
         )
         
