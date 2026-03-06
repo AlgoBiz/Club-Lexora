@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
-    Destination, DestinationEnquiry, OfferBanner, Category
+    Destination, DestinationEnquiry, OfferBanner, Category, Newsletter
 )
 
 User = get_user_model()
@@ -1133,4 +1133,20 @@ class CategoryCreateUpdateSerializer(serializers.ModelSerializer):
             queryset = queryset.exclude(pk=self.instance.pk)
         if queryset.exists():
             raise serializers.ValidationError("A category with this name already exists.")
+        return value
+
+
+# Newsletter Serializers
+class NewsletterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Newsletter
+        fields = ["id", "email", "date_added"]
+        read_only_fields = ["id", "date_added"]
+
+    def validate_email(self, value):
+        queryset = Newsletter.objects.filter(email__iexact=value)
+        if self.instance:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError("This email is already subscribed to the newsletter.")
         return value

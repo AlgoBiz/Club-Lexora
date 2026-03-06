@@ -18,7 +18,7 @@ from django.db.models.functions import TruncMonth
 
 from apps.user_account.models import (
     Hotel, Package, Houseboat, Cruise, IslandStay, FlightEnquiry, Enquiry,
-    Destination, DestinationEnquiry, OfferBanner, Category
+    Destination, DestinationEnquiry, OfferBanner, Category, Newsletter
 )
 from apps.user_account.api_v1.serializers import (
     UserSerializer, UserDetailSerializer, ChangePasswordSerializer,
@@ -37,6 +37,7 @@ from apps.user_account.api_v1.serializers import (
     DestinationEnquiryCreateSerializer, DestinationEnquiryUpdateSerializer,
     OfferBannerSerializer,
     CategoryListSerializer, CategoryDetailSerializer, CategoryCreateUpdateSerializer,
+    NewsletterSerializer,
 )
 from apps.user_account.api_v1.permissions import (
     CanManageEnquiries, CanManageAdministration, IsAdminOrHasBothPermissions
@@ -1845,3 +1846,45 @@ class CategoryViewSet(BaseModelViewSet):
         instance = self.get_object()
         instance.delete()
         return self.success_response("Category deleted successfully.")
+
+
+class NewsletterViewSet(BaseModelViewSet):
+    queryset = Newsletter.objects.all()
+    serializer_class = NewsletterSerializer
+    search_fields = ["email"]
+    ordering_fields = ["date_added", "email"]
+
+    def get_permissions(self):
+        if self.action == "create":
+            return [AllowAny()]
+        if self.action in ["update", "partial_update", "destroy"]:
+            return [CanManageAdministration()]
+        return [AllowAny()]
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        newsletter = serializer.save()
+        return self.success_response(
+            "Successfully subscribed to newsletter.",
+            self.get_serializer(newsletter).data,
+            status.HTTP_201_CREATED,
+        )
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return self.error_response("Validation failed.", serializer.errors)
+        newsletter = serializer.save()
+        return self.success_response(
+            "Newsletter subscription updated successfully.",
+            self.get_serializer(newsletter).data,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return self.success_response("Newsletter subscription deleted successfully.")
