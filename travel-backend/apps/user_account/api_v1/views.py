@@ -1798,6 +1798,17 @@ class CategoryViewSet(BaseModelViewSet):
         if not self.request.user.is_authenticated:
             queryset = queryset.filter(is_active=True)
         
+        # Filter categories by packages with is_international parameter
+        is_international = self.request.query_params.get('is_international')
+        if is_international is not None:
+            # Convert string to boolean
+            is_international_bool = is_international.lower() in ['true', '1', 'yes']
+            # Only include categories that have at least one active package with matching is_international
+            queryset = queryset.filter(
+                packages__is_active=True,
+                packages__is_international=is_international_bool
+            ).distinct()
+        
         return queryset
 
     def get_serializer_class(self):
